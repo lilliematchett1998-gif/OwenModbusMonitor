@@ -8,39 +8,169 @@
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f4f9; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .sensor-card { text-align: center; margin-bottom: 20px; }
-        .value-display { font-size: 4em; font-weight: bold; color: #2c3e50; }
-        .unit { font-size: 0.5em; color: #7f8c8d; }
-        canvas { max-height: 400px; }
-        .controls { margin-top: 20px; text-align: center; }
-        button { padding: 10px 20px; font-size: 1em; border: none; border-radius: 4px; cursor: pointer; color: white; margin: 0 5px; }
-        .btn-start { background-color: #2ecc71; }
-        .btn-stop { background-color: #e74c3c; }
-        .btn-reset { background-color: #f39c12; }
-        .btn-log { background-color: #34495e; }
-        @keyframes flash-red { 0% { background-color: #f4f4f9; } 50% { background-color: #ffcccc; } 100% { background-color: #f4f4f9; } }
-        .alarm-bg { animation: flash-red 1s infinite; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117; /* GitHub Dark bg */
+            color: #c9d1d9;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+        /* Общий стиль панелей (как .panel в source) */
+        .sensor-main, .stat-card, .chart-container, .controls-section, #logContainer {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .sensor-main:hover, .stat-card:hover, .chart-container:hover, .controls-section:hover {
+            border-color: #58a6ff;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+
+        /* Заголовки с точкой (как h3 в source) */
+        h2, .stat-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            font-size: 11px;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin: 0 0 16px 0;
+            display: flex; align-items: center;
+        }
+        h2::before, .stat-label::before {
+            content: ''; display: inline-block; width: 6px; height: 6px;
+            background-color: #58a6ff; border-radius: 50%; margin-right: 10px;
+            box-shadow: 0 0 8px rgba(88, 166, 255, 0.4);
+        }
+
+        /* Grid Layout */
+        .dashboard-top { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+        @media (max-width: 768px) { .dashboard-top { grid-template-columns: 1fr; } }
+
+        /* Sensor Main */
+        .sensor-main { text-align: center; position: relative; }
+        .value-display { 
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 5em; font-weight: 700; color: #e6edf3; 
+            text-shadow: 0 0 20px rgba(88, 166, 255, 0.1); 
+            margin: 10px 0; 
+            letter-spacing: -2px;
+        }
+        .unit { font-size: 0.4em; color: #8b949e; font-weight: 400; margin-left: 10px; }
+
+        /* Stats */
+        .stats-panel { display: flex; flex-direction: column; gap: 16px; }
+        .stat-card { display: flex; flex-direction: column; justify-content: center; align-items: center; flex: 1; }
+        .stat-value { 
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5em; font-weight: 500; 
+        }
+        .text-green { color: #73bf69; } /* GitHub Green */
+        .text-red { color: #f2495c; }   /* GitHub Red */
+
+        /* Status Badge */
+        .status-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px; padding: 4px 10px; border-radius: 20px; 
+            border: 1px solid #30363d; background: #21262d; color: #8b949e;
+            text-transform: uppercase; letter-spacing: 1px;
+            display: inline-block; margin-bottom: 10px;
+        }
+        .status-badge.status-error { background: rgba(242, 73, 92, 0.15); color: #f2495c; border-color: rgba(242, 73, 92, 0.4); }
+        .status-badge.status-success { background: rgba(46, 160, 67, 0.15); color: #73bf69; border-color: rgba(46, 160, 67, 0.4); }
+        .status-badge.status-neutral { background: rgba(139, 148, 158, 0.15); color: #8b949e; border-color: rgba(139, 148, 158, 0.4); }
+
+        /* Controls */
+        .controls-section { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; padding: 12px 20px; }
+        .control-group { display: flex; gap: 8px; align-items: center; }
+        @media (max-width: 1000px) { .controls-section { flex-direction: column; align-items: stretch; } .control-group { justify-content: center; flex-wrap: wrap; } }
+
+        label { color: #8b949e; font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif; }
+        input, select { 
+            background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 12px; border-radius: 6px; 
+            font-family: 'JetBrains Mono', monospace; font-size: 12px; outline: none; transition: border-color 0.2s; color-scheme: dark;
+        }
+        input:focus, select:focus { border-color: #58a6ff; }
+        input:invalid { border-color: #f2495c; }
+
+        /* Стилизация кнопок числового ввода (spin buttons) */
+        input[type=number]::-webkit-inner-spin-button { cursor: pointer; }
+
+        button { 
+            background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
+            padding: 6px 16px; font-size: 12px; border-radius: 6px; cursor: pointer; font-weight: 500;
+            font-family: 'Inter', sans-serif; transition: all 0.2s;
+        }
+        button:hover { background-color: #30363d; border-color: #8b949e; color: #e6edf3; }
+        button:active { transform: translateY(1px); }
+
+        /* Specific buttons */
+        .btn-primary { color: #58a6ff; border-color: rgba(88, 166, 255, 0.5); }
+        .btn-primary:hover { background: rgba(56, 139, 253, 0.1); border-color: #58a6ff; }
+        
+        .btn-start { color: #73bf69; border-color: rgba(46, 160, 67, 0.5); }
+        .btn-start:hover { background: rgba(46, 160, 67, 0.1); border-color: #73bf69; }
+        
+        .btn-stop { color: #f2495c; border-color: rgba(242, 73, 92, 0.5); }
+        .btn-stop:hover { background: rgba(242, 73, 92, 0.1); border-color: #f2495c; }
+
+        /* Chart */
+        canvas { max-height: 400px; width: 100%; }
+
+        /* Logs & Errors */
+        @keyframes flash-red-bg { 0% { background-color: #0d1117; } 50% { background-color: #2a0f0f; } 100% { background-color: #0d1117; } }
+        .alarm-bg { animation: flash-red-bg 1s infinite; }
+        
         .error-list { margin-top: 20px; }
-        .error-item { background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 5px; border: 1px solid #f5c6cb; border-radius: 4px; font-weight: bold; }
+        .error-item { 
+            background: rgba(242, 73, 92, 0.1); color: #f2495c; padding: 10px 14px; margin-bottom: 8px; 
+            border: 1px solid rgba(242, 73, 92, 0.4); border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 12px;
+        }
+        .error-item.success { background: rgba(46, 160, 67, 0.1); color: #73bf69; border-color: rgba(46, 160, 67, 0.4); }
+
         .new-log { animation: flash-log 3s ease-out; border-radius: 2px; }
-        @keyframes flash-log { 0% { background-color: #e67e22; } 100% { background-color: transparent; } }
-        @keyframes flash-button { 0% { background-color: #34495e; } 50% { background-color: #e67e22; } 100% { background-color: #34495e; } }
+        @keyframes flash-log { 0% { background-color: #d29922; } 100% { background-color: transparent; } }
+        @keyframes flash-button { 0% { border-color: #30363d; } 50% { border-color: #d29922; color: #d29922; } 100% { border-color: #30363d; } }
         .btn-flash { animation: flash-button 1s infinite; }
         
         /* Оверлей ожидания */
         #overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); color: white;
+            background: rgba(0,0,0,0.9); color: white;
             display: none; flex-direction: column; justify-content: center; align-items: center;
             z-index: 1000; backdrop-filter: blur(3px);
         }
         .spinner {
-            width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid #3498db;
+            width: 50px; height: 50px; border: 5px solid #30363d; border-top: 5px solid #58a6ff;
             border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .spinner-small {
+            width: 12px; height: 12px; border: 2px solid rgba(88, 166, 255, 0.3); border-top: 2px solid #58a6ff;
+            border-radius: 50%; animation: spin 1s linear infinite; display: inline-block;
+        }
+
+        #logContainer.fullscreen {
+            position: fixed; top: 0; right: 2.5%; left: 2.5%; height: 100%;
+            margin: 0; border-radius: 0; z-index: 2000;
+            display: flex !important; flex-direction: column;
+        }
+        #logContainer.fullscreen #logContent { height: auto !important; flex: 1; }
+
+        /* Стилизация скроллбара */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #58a6ff; }
     </style>
 </head>
 <body>
@@ -48,81 +178,106 @@
     <div id="overlay">
         <div class="spinner"></div>
         <h1>Ожидание . . .</h1>
-        <p>Время ожидания: <span id="timer">0</span> сек.</p>
+        <p id="waitText">Время ожидания: <span id="timer">0</span> сек.</p>
+        <p id="errText" style="display: none; color: #f2495c; font-weight: bold;">Ошибка сети</p>
     </div>
 
     <div class="container">
-        <div class="sensor-card">
-            <h2>Датчик Давления</h2>
-            <div id="statusBadge" style="display: inline-block; padding: 5px 10px; border-radius: 15px; background: #95a5a6; color: white; font-weight: bold; margin-bottom: 10px;">--</div>
-            <div class="value-display">
-                <span id="pressureValue">--</span>
-                <span class="unit">бар</span>
-            </div>
-            <div style="margin-top: 10px; font-size: 1.2em; color: #27ae60; font-weight: bold;">
-                Годных: <span id="goodCount">0</span>
-            </div>
-            <div style="margin-top: 5px; font-size: 1.2em; color: #c0392b; font-weight: bold;">
-                Брак: <span id="failCount">0</span>
-            </div>
-        </div>
-        <canvas id="pressureChart"></canvas>
-        <div class="controls">
-            <div style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 15px;">
+        <div class="controls-section">
+            <div class="control-group">
                 <label>Уставка:</label>
-                <input type="number" id="setpointInput" step="0.1" style="padding: 5px; width: 80px; border: 1px solid #ccc; border-radius: 4px;">
-                <select onchange="document.getElementById('setpointInput').value = this.value" style="padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
-                    <option value="">Выбрать...</option>
+                <input type="number" id="setpointInput" step="0.1" min="0" max="50" style="width: 70px;">
+                <select onchange="document.getElementById('setpointInput').value = this.value">
+                    <option value="">Пресеты...</option>
                     <option value="6.3">6.3</option>
                     <option value="16">16</option>
                     <option value="35">35</option>
                     <option value="50">50</option>
                 </select>
-                <button onclick="sendSetpoint()" style="background-color: #3498db;">Задать</button>
-                <span style="font-size: 0.9em; color: #555; margin-left: 10px;">Текущая: <span id="currentSetpoint">--</span></span>
+                <button onclick="sendSetpoint()" class="btn-primary">OK</button>
+                <span style="font-size: 0.85em; color: var(--text-muted); margin-left: 5px;">Тек: <span id="currentSetpoint" style="color: white; font-weight: bold;">--</span></span>
             </div>
-            <div style="margin-top: 10px;">
+            <div class="control-group">
                 <button class="btn-start" onclick="startMonitoring()">Старт</button>
                 <button class="btn-stop" onclick="stopMonitoring()">Стоп</button>
                 <button class="btn-reset" onclick="resetSystem()">Сброс</button>
-                <button id="btnLog" class="btn-log" onclick="toggleLogs()">Журнал</button>
-                <button onclick="exportChartData()" style="background-color: #8e44ad;">Экспорт графика</button>
-                <button onclick="chart.resetZoom()" style="background-color: #7f8c8d;">Сброс зума</button>
-                <button onclick="downloadHistory()" style="background-color: #2c3e50; margin-top: 5px;">📥 История (CSV)</button>
-                <button onclick="clearHistory()" style="background-color: #c0392b; margin-top: 5px;" title="Очистить историю">🗑️</button>
+            </div>
+            <div class="control-group">
+                <button id="btnLog" class="btn-dark" onclick="toggleLogs()">Журнал</button>
+                <button id="btnSound" class="btn-dark" onclick="toggleSound()" title="Звук">🔊</button>
             </div>
         </div>
+
+        <div class="dashboard-top">
+            <div class="sensor-main">
+                <h2>Датчик Давления</h2>
+                <div id="statusBadge" class="status-badge">--</div>
+                <div class="value-display">
+                    <span id="pressureValue">--</span>
+                    <span class="unit">бар</span>
+                </div>
+            </div>
+            <div class="stats-panel">
+                <div class="stat-card">
+                    <span class="stat-label">Годных</span>
+                    <span class="stat-value text-green" id="goodCount">0</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Брак</span>
+                    <span class="stat-value text-red" id="failCount">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
+                <button onclick="chart.resetZoom()" class="btn-gray" style="font-size: 11px; padding: 4px 10px;">Сброс зума</button>
+                <button id="btnExportHistory" onclick="downloadHistory()" class="btn-gray" style="font-size: 11px; padding: 4px 10px; margin-left: 10px; color: #58a6ff; border-color: rgba(88, 166, 255, 0.3);">Экспорт истории</button>
+                <button onclick="clearHistory()" class="btn-gray" style="font-size: 11px; padding: 4px 10px; margin-left: 10px; color: #f2495c; border-color: rgba(242, 73, 92, 0.3);">Очистить историю</button>
+            </div>
+            <canvas id="pressureChart"></canvas>
+        </div>
+
         <div id="errorList" class="error-list"></div>
         
         <!-- Контейнер журнала с пагинацией -->
-        <div id="logContainer" style="display:none; margin-top: 20px; background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 4px; text-align: left;">
-            <div style="margin-bottom: 10px; border-bottom: 1px solid #7f8c8d; padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9em;">
+        <div id="logContainer" style="display:none; margin-top: 20px; text-align: left;">
+            <div style="margin-bottom: 10px; border-bottom: 1px solid #30363d; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-family: 'JetBrains Mono';">
                 <div>
                     <span>Всего: <span id="logTotal">0</span></span>
-                    <select id="pageSizeSelect" onchange="changePageSize()" style="margin-left: 10px; padding: 2px; background: #34495e; color: white; border: 1px solid #7f8c8d; border-radius: 3px;">
+                    <select id="pageSizeSelect" onchange="changePageSize()" style="margin-left: 10px;">
                         <option value="20">20</option>
                         <option value="50">50</option>
                         <option value="100">100</option>
                     </select>
-                    <select id="sortSelect" onchange="changeSort()" style="margin-left: 10px; padding: 2px; background: #34495e; color: white; border: 1px solid #7f8c8d; border-radius: 3px;">
+                    <select id="sortSelect" onchange="changeSort()" style="margin-left: 10px;">
                         <option value="desc">Сначала новые</option>
                         <option value="asc">Сначала старые</option>
                     </select>
-                    <input type="text" id="logFilter" placeholder="Фильтр..." style="margin-left: 10px; padding: 2px 5px; width: 120px; background: #34495e; color: white; border: 1px solid #7f8c8d; border-radius: 3px;" oninput="filterLogs()">
-                    <button onclick="clearLogs()" title="Очистить журнал" style="margin-left: 10px; padding: 2px 8px; background: #c0392b; border: none; border-radius: 3px; cursor: pointer; color: white;">🗑️</button>
-                    <button onclick="downloadLogs()" title="Скачать журнал" style="margin-left: 5px; padding: 2px 8px; background: #2980b9; border: none; border-radius: 3px; cursor: pointer; color: white;">💾</button>
+                    <input type="text" id="logFilter" placeholder="Фильтр..." style="margin-left: 10px; width: 120px;" oninput="filterLogs()">
+                    <button onclick="clearLogs()" title="Очистить журнал" style="margin-left: 10px; color: #f2495c; border-color: rgba(242, 73, 92, 0.5);">🗑️</button>
+                    <button onclick="downloadLogs()" title="Скачать журнал" style="margin-left: 5px; color: #58a6ff; border-color: rgba(88, 166, 255, 0.5);">💾</button>
                 </div>
                 <div>
-                    <button id="btnPrevPage" onclick="changePage(-1)" style="padding: 2px 8px; background: #7f8c8d; font-size: 0.9em;">&lt;</button>
+                    <button id="btnPrevPage" onclick="changePage(-1)" style="padding: 4px 10px;">&lt;</button>
                     <span id="logPageDisplay" style="margin: 0 8px;">1</span>
-                    <button id="btnNextPage" onclick="changePage(1)" style="padding: 2px 8px; background: #7f8c8d; font-size: 0.9em;">&gt;</button>
+                    <button id="btnNextPage" onclick="changePage(1)" style="padding: 4px 10px;">&gt;</button>
+                    <button onclick="changeFontSize(1)" title="Увеличить шрифт" style="margin-left: 10px; padding: 4px 8px; color: #8b949e; border-color: #30363d;">A+</button>
+                    <button onclick="changeFontSize(-1)" title="Уменьшить шрифт" style="margin-left: 5px; padding: 4px 8px; color: #8b949e; border-color: #30363d;">A-</button>
+                    <button onclick="toggleFullscreen()" title="На весь экран" style="margin-left: 10px; padding: 4px 10px; color: #8b949e; border-color: #30363d;">⛶</button>
+                    <button onclick="toggleLogs()" title="Закрыть" style="margin-left: 10px; padding: 4px 10px; color: #8b949e; border-color: #30363d;">✕</button>
                 </div>
             </div>
-            <div id="logContent" style="max-height: 400px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 0.9em;"></div>
+            <div id="logContent" style="height: 320px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8b949e;"></div>
         </div>
     </div>
 
     <script>
+        // Настройки Chart.js по умолчанию для темной темы (как в source)
+        Chart.defaults.color = '#8b949e';
+        Chart.defaults.borderColor = '#30363d';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
         const totalPoints = 60;
         const writeIndex = 48; // Точка записи данных (80% от ширины)
 
@@ -142,17 +297,56 @@
                 ctx.moveTo(x, yAxis.top);
                 ctx.lineTo(x, yAxis.bottom);
                 ctx.lineWidth = 2;
-                ctx.strokeStyle = '#808080'; // Красный пунктир
+                ctx.strokeStyle = '#30363d'; // Серый пунктир
                 ctx.setLineDash([5, 5]);
                 ctx.stroke();
 
-                const value = chart.data.datasets[0].data[writeIndex];
-                if (value !== null && value !== undefined) {
-                    ctx.font = 'bold 12px Segoe UI';
-                    ctx.fillStyle = '#808080';
-                    ctx.textAlign = 'left';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(`Давление: ${value.toFixed(2)}`, x + 5, y);
+                if (chart.isDatasetVisible(1)) {
+                    const metaSetpoint = chart.getDatasetMeta(1);
+                    const pointSetpoint = metaSetpoint.data[writeIndex];
+                    const valueSetpoint = chart.data.datasets[1].data[writeIndex];
+                    if (valueSetpoint !== null && valueSetpoint !== undefined) {
+                        ctx.font = 'bold 12px JetBrains Mono';
+                        ctx.fillStyle = '#238636';
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(`Уставка: ${valueSetpoint.toFixed(2)}`, x + 5, pointSetpoint.y);
+                    }
+                }
+
+                if (chart.isDatasetVisible(2)) {
+                    const metaLimit = chart.getDatasetMeta(2);
+                    const pointLimit = metaLimit.data[writeIndex];
+                    const valueLimit = chart.data.datasets[2].data[writeIndex];
+                    if (valueLimit !== null && valueLimit !== undefined) {
+                        ctx.font = 'bold 12px JetBrains Mono';
+                        ctx.fillStyle = '#f2495c';
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(`Максимальное давление: ${valueLimit.toFixed(2)}`, x + 5, pointLimit.y);
+                    }
+                }
+
+                if (chart.isDatasetVisible(0)) {
+                    const value = chart.data.datasets[0].data[writeIndex];
+                    if (value !== null && value !== undefined) {
+                        const text = `Давление: ${value.toFixed(2)}`;
+                        ctx.font = 'bold 12px JetBrains Mono';
+                        const textWidth = ctx.measureText(text).width;
+                        const padding = 6;
+                        const boxHeight = 22;
+
+                        ctx.fillStyle = '#0d1117';
+                        ctx.fillRect(x + 8, y - boxHeight / 2, textWidth + padding * 2, boxHeight);
+                        ctx.lineWidth = 1;
+                        ctx.strokeStyle = '#58a6ff';
+                        ctx.strokeRect(x + 8, y - boxHeight / 2, textWidth + padding * 2, boxHeight);
+
+                        ctx.fillStyle = '#58a6ff';
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(text, x + 8 + padding, y);
+                    }
                 }
                 ctx.restore();
             }
@@ -166,15 +360,29 @@
                 datasets: [{
                     label: 'Давление (бар)',
                     data: new Array(totalPoints).fill(null),
-                    borderColor: '#3498db',
-                    backgroundColor: 'rgba(52, 152, 219, 0.2)',
+                    borderColor: '#58a6ff',
+                    backgroundColor: (ctx) => {
+                        const canvas = ctx.chart.ctx;
+                        const gradient = canvas.createLinearGradient(0, 0, 0, 400);
+                        gradient.addColorStop(0, 'rgba(88, 166, 255, 0.25)');
+                        gradient.addColorStop(1, 'rgba(88, 166, 255, 0)');
+                        return gradient;
+                    },
                     fill: true,
                     tension: 0.3,
                     spanGaps: false
                 }, {
                     label: 'Уставка',
                     data: new Array(totalPoints).fill(null),
-                    borderColor: '#008000',
+                    borderColor: '#238636',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    spanGaps: false
+                }, {
+                    label: 'Максимальное давление',
+                    data: new Array(totalPoints).fill(null),
+                    borderColor: '#f2495c',
                     borderWidth: 2,
                     borderDash: [5, 5],
                     pointRadius: 0,
@@ -182,12 +390,18 @@
                 }]
             },
             options: {
-                scales: { x: { display: false }, y: { beginAtZero: true } },
+                scales: { 
+                    x: { display: false }, 
+                    y: { beginAtZero: true, grid: { borderDash: [4, 4], color: '#30363d', drawBorder: false }, ticks: { color: '#8b949e', font: { family: "'JetBrains Mono', monospace" } } } 
+                },
                 animation: false,
                 plugins: {
                     zoom: {
                         zoom: {
-                            wheel: { enabled: true },
+                            wheel: { 
+                                enabled: true,
+                                modifierKey: 'ctrl'
+                            },
                             pinch: { enabled: true },
                             mode: 'x' // Масштабирование только по оси времени (X)
                         },
@@ -211,15 +425,19 @@
                 // Логика оверлея: если нет связи, показываем экран ожидания
                 if (!data.isConnected) {
                     overlay.style.display = 'flex';
+                    document.getElementById('waitText').style.display = 'block';
+                    document.getElementById('errText').style.display = 'none';
                     document.getElementById('timer').innerText = data.waitingSeconds;
                     
                     // Сдвигаем график (создаем разрыв)
                     chart.data.labels.shift();
                     chart.data.datasets[0].data.shift();
                     chart.data.datasets[1].data.shift();
+                    chart.data.datasets[2].data.shift();
                     chart.data.labels.push('');
                     chart.data.datasets[0].data.push(null);
                     chart.data.datasets[1].data.push(null);
+                    chart.data.datasets[2].data.push(null);
                     chart.update();
                     
                     return; // Прерываем обновление остальных данных
@@ -229,6 +447,12 @@
 
                 // Логика мигания кнопки журнала
                 if (seenLogCount === null) seenLogCount = data.logCount; // Инициализация при первом запуске
+                if (lastServerLogCount === -1) lastServerLogCount = data.logCount;
+
+                if (data.logCount > lastServerLogCount) {
+                    playAlertSound();
+                }
+                lastServerLogCount = data.logCount;
 
                 const btnLog = document.getElementById('btnLog');
                 const logContainer = document.getElementById('logContainer');
@@ -269,29 +493,33 @@
 
                 // Обновляем индикатор статуса
                 const statusBadge = document.getElementById('statusBadge');
+                // Сброс классов и стилей
+                statusBadge.className = 'status-badge';
+                statusBadge.style = '';
+
                 if (data.fail === 1) {
                     document.body.classList.add('alarm-bg');
                     statusBadge.innerText = "НЕ ГОДЕН";
-                    statusBadge.style.backgroundColor = "#c0392b"; // Темно-красный
+                    statusBadge.classList.add('status-error');
                 } else if (data.overPressure === 1) {
                     document.body.classList.add('alarm-bg');
                     statusBadge.innerText = "АВАРИЯ ДАВЛЕНИЯ";
-                    statusBadge.style.backgroundColor = "#c0392b"; // Темно-красный
+                    statusBadge.classList.add('status-error');
                 } else if (data.success === 1) {
                     document.body.classList.remove('alarm-bg');
                     statusBadge.innerText = "ГОДЕН";
-                    statusBadge.style.backgroundColor = "#27ae60"; // Темно-зеленый
+                    statusBadge.classList.add('status-success');
                 } else {
                     document.body.classList.remove('alarm-bg');
                     if (data.start === 1) {
                         statusBadge.innerText = "РАБОТА";
-                        statusBadge.style.backgroundColor = "#2ecc71"; // Зеленый
+                        statusBadge.classList.add('status-success');
                     } else if (data.stop === 1) {
                         statusBadge.innerText = "ОСТАНОВЛЕНО";
-                        statusBadge.style.backgroundColor = "#e74c3c"; // Красный
+                        statusBadge.classList.add('status-error');
                     } else {
                         statusBadge.innerText = "ГОТОВ";
-                        statusBadge.style.backgroundColor = "#95a5a6"; // Серый
+                        statusBadge.classList.add('status-neutral');
                     }
                 }
 
@@ -312,9 +540,7 @@
                     div.className = 'error-item';
                     // Если сообщение позитивное (начинается с ✅), красим в зеленый
                     if (msg.includes('✅')) {
-                        div.style.backgroundColor = '#d4edda';
-                        div.style.color = '#155724';
-                        div.style.borderColor = '#c3e6cb';
+                        div.classList.add('success');
                     }
                     div.innerText = msg;
                     errorList.appendChild(div);
@@ -331,14 +557,17 @@
                     chart.data.labels.shift();
                     chart.data.datasets[0].data.shift();
                     chart.data.datasets[1].data.shift();
+                    chart.data.datasets[2].data.shift();
                     // Добавляем пустое место в конец, чтобы сохранить ширину окна
                     chart.data.labels.push('');
                     chart.data.datasets[0].data.push(null);
                     chart.data.datasets[1].data.push(null);
+                    chart.data.datasets[2].data.push(null);
                     // Записываем текущие данные в фиксированную позицию (80%)
                     chart.data.labels[writeIndex] = new Date().toLocaleString('ru-RU');
                     chart.data.datasets[0].data[writeIndex] = data.pressure;
                     chart.data.datasets[1].data[writeIndex] = data.setpoint;
+                    chart.data.datasets[2].data[writeIndex] = data.setpoint !== null ? data.setpoint * 1.2 : null;
                     
                     chart.update();
                 }
@@ -346,15 +575,18 @@
                 console.error(err);
                 // Если сервер не отвечает (ошибка сети)
                 document.getElementById('overlay').style.display = 'flex';
-                document.getElementById('timer').innerText = "Ошибка сети";
+                document.getElementById('waitText').style.display = 'none';
+                document.getElementById('errText').style.display = 'block';
 
                 // Сдвигаем график (создаем разрыв)
                 chart.data.labels.shift();
                 chart.data.datasets[0].data.shift();
                 chart.data.datasets[1].data.shift();
+                chart.data.datasets[2].data.shift();
                 chart.data.labels.push('');
                 chart.data.datasets[0].data.push(null);
                 chart.data.datasets[1].data.push(null);
+                chart.data.datasets[2].data.push(null);
                 chart.update();
             }
         }
@@ -369,12 +601,27 @@
         }
 
         async function sendSetpoint() {
-            const val = document.getElementById('setpointInput').value;
-            if (!val) return;
+            const input = document.getElementById('setpointInput');
+            let val = parseFloat(input.value);
+            if (isNaN(val)) return;
+
+            if (val > 50) {
+                alert('Значение не может превышать 50');
+                return;
+            }
+            
+            if (val < 0) {
+                alert('Значение не может быть меньше 0');
+                return;
+            }
+
+            // Сохраняем значение в localStorage
+            localStorage.setItem('savedSetpoint', val);
+
             await fetch('/api/setpoint', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ value: parseFloat(val) })
+                body: JSON.stringify({ value: val })
             });
         }
 
@@ -385,12 +632,14 @@
             chart.data.labels = new Array(totalPoints).fill('');
             chart.data.datasets[0].data = new Array(totalPoints).fill(null);
             chart.data.datasets[1].data = new Array(totalPoints).fill(null);
+            chart.data.datasets[2].data = new Array(totalPoints).fill(null);
             chart.update();
 
             // Сброс визуальных статусов
             const statusBadge = document.getElementById('statusBadge');
             statusBadge.innerText = "ГОТОВ";
-            statusBadge.style.backgroundColor = "#95a5a6";
+            statusBadge.className = 'status-badge status-neutral';
+            statusBadge.style = '';
             document.getElementById('errorList').innerHTML = '';
             document.body.classList.remove('alarm-bg');
 
@@ -411,7 +660,23 @@
         let totalPages = 1;
         let sortOrder = 'desc';
         let seenLogCount = null;
+        let lastServerLogCount = -1;
         let isSetpointInitialized = false;
+        let currentFontSize = 12;
+        let isSoundEnabled = true;
+
+        // Восстановление уставки из localStorage при загрузке
+        const savedSetpoint = localStorage.getItem('savedSetpoint');
+        if (savedSetpoint !== null) {
+            document.getElementById('setpointInput').value = savedSetpoint;
+            isSetpointInitialized = true; // Предотвращаем перезапись значением с сервера при первом опросе
+        }
+
+        function toggleSound() {
+            isSoundEnabled = !isSoundEnabled;
+            const btn = document.getElementById('btnSound');
+            btn.innerText = isSoundEnabled ? '🔊' : '🔇';
+        }
 
         async function fetchLogs() {
             const contentDiv = document.getElementById('logContent');
@@ -453,10 +718,17 @@
             }
         }
 
+        function toggleFullscreen() {
+            document.getElementById('logContainer').classList.toggle('fullscreen');
+        }
+
         function toggleLogs() {
             const container = document.getElementById('logContainer');
             if (container.style.display === 'none') {
                 container.style.display = 'block';
+                // Плавная прокрутка к панели журнала
+                setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+
                 document.getElementById('logContent').innerHTML = 'Загрузка...';
                 previousLogs = null;
                 currentPage = 1; // Сброс на первую страницу при открытии
@@ -469,6 +741,7 @@
                 logInterval = setInterval(fetchLogs, 2000);
             } else {
                 container.style.display = 'none';
+                container.classList.remove('fullscreen');
                 if (logInterval) clearInterval(logInterval);
             }
         }
@@ -512,36 +785,31 @@
             window.location.href = '/api/logs/download';
         }
 
-        function exportChartData() {
-            const labels = chart.data.labels;
-            const data = chart.data.datasets[0].data;
+        async function downloadHistory() {
+            const btn = document.getElementById('btnExportHistory');
+            const originalContent = btn.innerHTML;
             
-            // Формируем заголовок CSV (разделитель точка с запятой для Excel в RU локали)
-            let csvContent = "Дата и Время;Давление (бар)\n";
-
-            // Проходим по всем точкам графика
-            for (let i = 0; i < labels.length; i++) {
-                // Сохраняем только точки, где есть время (игнорируем пустые слоты инициализации)
-                if (labels[i]) {
-                    // Заменяем точку на запятую для корректного открытия в русском Excel
-                    let val = data[i] !== null ? data[i].toString().replace('.', ',') : "";
-                    csvContent += `${labels[i]};${val}\n`;
-                }
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<div class="spinner-small"></div> Загрузка...';
+                const response = await fetch('/api/history/download');
+                if (!response.ok) throw new Error('File not found');
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                const now = new Date();
+                a.download = `История_графика_${now.toLocaleDateString('ru-RU').replace(/\./g, '-')}_${now.toLocaleTimeString('ru-RU').replace(/:/g, '-')}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            } catch (e) { alert('История пуста или недоступна'); }
+            finally {
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
             }
-
-            // Создаем Blob и ссылку для скачивания
-            const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('ru-RU').replace(/\./g, '-');
-            const timeStr = now.toLocaleTimeString('ru-RU').replace(/:/g, '-');
-            link.download = `chart_export_${dateStr}_${timeStr}.csv`;
-            link.click();
-        }
-
-        function downloadHistory() {
-            window.location.href = '/api/history/download';
         }
 
         async function clearHistory() {
@@ -549,6 +817,69 @@
                 await fetch('/api/history/clear', { method: 'POST' });
             }
         }
+
+        function changeFontSize(delta) {
+            currentFontSize += delta;
+            if (currentFontSize < 10) currentFontSize = 10;
+            if (currentFontSize > 24) currentFontSize = 24;
+            document.getElementById('logContent').style.fontSize = currentFontSize + 'px';
+        }
+
+        // Закрытие журнала при клике вне его области в полноэкранном режиме
+        document.addEventListener('click', function(event) {
+            const container = document.getElementById('logContainer');
+            const btnLog = document.getElementById('btnLog');
+            
+            if (container.style.display !== 'none' && 
+                container.classList.contains('fullscreen') && 
+                !container.contains(event.target) && 
+                event.target !== btnLog) {
+                toggleLogs();
+            }
+        });
+
+        function playAlertSound() {
+            if (!isSoundEnabled) return;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15);
+                
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                
+                osc.start();
+                osc.stop(ctx.currentTime + 0.15);
+            } catch (e) { console.error(e); }
+        }
+
+        // Обновление подсказки с размером файла при наведении на кнопку экспорта
+        document.getElementById('btnExportHistory').addEventListener('mouseenter', async function() {
+            try {
+                const response = await fetch('/api/history/info');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.exists) {
+                        const sizeKB = (data.size / 1024).toFixed(1);
+                        const sizeMB = (data.size / 1024 / 1024).toFixed(2);
+                        const sizeStr = data.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+                        this.title = `Скачать историю (${sizeStr})`;
+                    } else {
+                        this.title = 'История пуста';
+                    }
+                }
+            } catch (e) { }
+        });
     </script>
 </body>
 </html>

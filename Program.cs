@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
@@ -78,6 +78,15 @@ app.MapGet("/api/history/download", () =>
         return Results.File(Path.GetFullPath("history.csv"), "text/csv", $"history_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
     }
     return Results.NotFound();
+});
+
+app.MapGet("/api/history/info", () => 
+{
+    if (File.Exists("history.csv"))
+    {
+        return new { exists = true, size = new FileInfo("history.csv").Length };
+    }
+    return new { exists = false, size = 0L };
 });
 
 // Эндпоинт для чтения логов (с пагинацией)
