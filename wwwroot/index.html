@@ -11,7 +11,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'JetBrains Mono', monospace;
             background-color: #0d1117; /* GitHub Dark bg */
             color: #c9d1d9;
             margin: 0;
@@ -21,7 +21,7 @@
         .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 
         /* Общий стиль панелей (как .panel в source) */
-        .sensor-main, .stat-card, .chart-container, .controls-section, #logContainer {
+        .sensor-main, .stat-card, .chart-container, .controls-section, .stats-panel {
             background-color: #161b22;
             border: 1px solid #30363d;
             border-radius: 8px;
@@ -29,7 +29,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
-        .sensor-main:hover, .stat-card:hover, .chart-container:hover, .controls-section:hover {
+        .sensor-main:hover, .stat-card:hover, .chart-container:hover, .controls-section:hover, #logContainer:hover, .stats-panel:hover {
             border-color: #58a6ff;
             box-shadow: 0 6px 16px rgba(0,0,0,0.2);
         }
@@ -52,8 +52,9 @@
         }
 
         /* Grid Layout */
-        .dashboard-top { display: grid; grid-template-columns: 1fr 2fr; gap: 16px; }
-        @media (max-width: 768px) { .dashboard-top { grid-template-columns: 1fr; } }
+        .dashboard-top { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .dashboard-top.with-logs { grid-template-columns: 1fr 1fr 1fr; }
+        @media (max-width: 768px) { .dashboard-top, .dashboard-top.with-logs { grid-template-columns: 1fr; } }
 
         /* Sensor Main */
         .sensor-main { 
@@ -65,6 +66,7 @@
             align-items: center;
             min-height: 300px;
             aspect-ratio: 1 / 1;
+            min-width: 0;
         }
         .value-display { 
             font-family: 'JetBrains Mono', monospace;
@@ -77,33 +79,63 @@
         .unit { font-size: 0.4em; color: #8b949e; font-weight: 400; margin-left: 10px; }
 
         /* Stats */
-        .stats-panel { display: flex; flex-direction: column; gap: 16px; }
-        .stat-card { display: flex; flex-direction: column; justify-content: center; align-items: center; flex: 1; }
-        .stat-value { 
+        .stats-panel { display: flex; flex-direction: column; align-items: center; position: relative; min-height: 0; min-width: 0; }
+        
+        .status-row {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 2.5em; font-weight: 500; 
+            font-size: 14px;
+            color: #8b949e;
+            display: flex;
+            align-items: center;
+            transition: color 0.2s, background-color 0.2s;
+            padding: 4px 8px;
+            border-radius: 4px;
         }
+        .status-row:hover { background-color: rgba(255, 255, 255, 0.05); }
+        .status-row::before {
+            content: ''; display: inline-block; width: 8px; height: 8px;
+            background-color: #30363d; border-radius: 50%; margin-right: 12px;
+            box-shadow: none;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        .status-row.active-green { color: #e6edf3; }
+        .status-row.active-green::before { background-color: #238636; box-shadow: 0 0 8px rgba(35, 134, 54, 0.6); }
+        
+        .status-row.active-red { color: #e6edf3; }
+        .status-row.active-red::before { background-color: #f2495c; box-shadow: 0 0 8px rgba(242, 73, 92, 0.6); }
+
         .text-green { color: #73bf69; } /* GitHub Green */
         .text-red { color: #f2495c; }   /* GitHub Red */
 
-        /* Status Badge */
-        .status-badge {
+        /* Status Top Panel */
+        .status-top-panel {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 11px; padding: 4px 10px; border-radius: 20px; 
-            border: 1px solid #30363d; background: #21262d; color: #8b949e;
-            text-transform: uppercase; letter-spacing: 1px;
-            position: absolute; top: 16px; right: 16px;
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #8b949e;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: sticky;
+            top: 10px;
+            z-index: 100;
         }
-        .status-badge.status-error { background: rgba(242, 73, 92, 0.15); color: #f2495c; border-color: rgba(242, 73, 92, 0.4); }
-        .status-badge.status-success { background: rgba(46, 160, 67, 0.15); color: #73bf69; border-color: rgba(46, 160, 67, 0.4); }
-        .status-badge.status-neutral { background: rgba(139, 148, 158, 0.15); color: #8b949e; border-color: rgba(139, 148, 158, 0.4); }
+        .status-top-panel.status-error { background: rgba(242, 73, 92, 0.15); color: #f2495c; border-color: #f2495c; box-shadow: 0 0 20px rgba(242, 73, 92, 0.2); }
+        .status-top-panel.status-success { background: rgba(46, 160, 67, 0.15); color: #73bf69; border-color: #73bf69; box-shadow: 0 0 20px rgba(46, 160, 67, 0.2); }
+        .status-top-panel.status-neutral { background: #161b22; color: #8b949e; border-color: #30363d; }
 
         /* Controls */
         .controls-section { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; padding: 12px 20px; }
         .control-group { display: flex; gap: 8px; align-items: center; }
         @media (max-width: 1000px) { .controls-section { flex-direction: column; align-items: stretch; } .control-group { justify-content: center; flex-wrap: wrap; } }
 
-        label { color: #8b949e; font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif; }
+        label { color: #8b949e; font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
         input, select { 
             background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 12px; border-radius: 6px; 
             font-family: 'JetBrains Mono', monospace; font-size: 12px; outline: none; transition: border-color 0.2s; color-scheme: dark;
@@ -117,10 +149,11 @@
         button { 
             background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
             padding: 6px 16px; font-size: 12px; border-radius: 6px; cursor: pointer; font-weight: 500;
-            font-family: 'Inter', sans-serif; transition: all 0.2s;
+            font-family: 'JetBrains Mono', monospace; transition: all 0.2s;
         }
         button:hover { background-color: #30363d; border-color: #8b949e; color: #e6edf3; }
         button:active { transform: translateY(1px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 
         /* Specific buttons */
         .btn-primary { color: #58a6ff; border-color: rgba(88, 166, 255, 0.5); }
@@ -133,7 +166,7 @@
         .btn-stop:hover { background: rgba(242, 73, 92, 0.1); border-color: #f2495c; }
 
         /* Chart */
-        canvas { max-height: 400px; width: 100%; }
+        canvas { max-height: 300px; width: 100%; }
 
         /* Logs & Errors */
         @keyframes flash-red-bg { 0% { background-color: #0d1117; } 50% { background-color: #2a0f0f; } 100% { background-color: #0d1117; } }
@@ -148,8 +181,10 @@
 
         .new-log { animation: flash-log 3s ease-out; border-radius: 2px; }
         @keyframes flash-log { 0% { background-color: #d29922; } 100% { background-color: transparent; } }
-        @keyframes flash-button { 0% { border-color: #30363d; } 50% { border-color: #d29922; color: #d29922; } 100% { border-color: #30363d; } }
-        .btn-flash { animation: flash-button 1s infinite; }
+        @keyframes flash-yellow { 0% { border-color: #30363d; } 50% { border-color: #d29922; color: #d29922; } 100% { border-color: #30363d; } }
+        @keyframes flash-red { 0% { border-color: #30363d; } 50% { border-color: #f2495c; color: #f2495c; } 100% { border-color: #30363d; } }
+        .btn-flash-yellow { animation: flash-yellow 1s infinite; }
+        .btn-flash-red { animation: flash-red 1s infinite; }
         
         /* Оверлей ожидания */
         #overlay {
@@ -165,14 +200,25 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .spinner-small {
-            width: 12px; height: 12px; border: 2px solid rgba(88, 166, 255, 0.3); border-top: 2px solid #58a6ff;
+            width: 10px; height: 10px; border: 2px solid rgba(88, 166, 255, 0.3); border-top: 2px solid #58a6ff;
             border-radius: 50%; animation: spin 1s linear infinite; display: inline-block;
+            vertical-align: middle;
+        }
+
+        #logContainer {
+            background-color: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 16px;
+            box-sizing: border-box;
+            min-width: 0;
         }
 
         #logContainer.fullscreen {
-            position: fixed; top: 0; right: 2.5%; left: 2.5%; height: 100%;
+            position: fixed; top: 0; right: 2.5%; left: 2.5%; height: 100% !important;
             margin: 0; border-radius: 0; z-index: 2000;
             display: flex !important; flex-direction: column;
+            width: auto !important;
         }
         #logContainer.fullscreen #logContent { height: auto !important; flex: 1; }
 
@@ -181,18 +227,52 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #58a6ff; }
+
+        /* Стили для строк журнала и кнопки удаления */
+        .log-row { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; }
+        .log-row:hover { background-color: rgba(255, 255, 255, 0.05); }
+        .btn-delete-log { 
+            background: transparent; border: none; color: #8b949e; cursor: pointer; 
+            padding: 0 6px; font-size: 16px; line-height: 1; margin-left: 8px;
+            opacity: 0; transition: opacity 0.2s; font-family: 'Inter', sans-serif;
+        }
+        .log-row:hover .btn-delete-log { opacity: 1; }
+        .btn-delete-log:hover { color: #f2495c; }
+
+        /* Цвета уровней логов */
+        .log-info { color: #58a6ff; }    /* Blue */
+        .log-warning { color: #d29922; } /* Yellow/Orange */
+        .log-error { color: #f2495c; }   /* Red */
+
+        /* Log Header Layout */
+        .log-header {
+            margin-bottom: 10px; 
+            border-bottom: 1px solid #30363d; 
+            padding-bottom: 5px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            font-size: 11px; 
+            font-family: 'JetBrains Mono';
+        }
+        .log-row-group { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+        
+        #logContainer.fullscreen .log-row-group {
+            justify-content: flex-end !important;
+        }
     </style>
 </head>
 <body>
     <!-- Оверлей -->
     <div id="overlay">
         <div class="spinner"></div>
-        <h1>Ожидание . . .</h1>
-        <p id="waitText">Время ожидания: <span id="timer">0</span> сек.</p>
-        <p id="errText" style="display: none; color: #f2495c; font-weight: bold;">Ошибка сети</p>
+        <h1>Ожидание подключения – <span id="overlayTimer"></span></h1>
+        <p id="errText" style="display: none; color: #f2495c; font-weight: bold;">Ошибка связи с сервером</p>
     </div>
 
     <div class="container">
+        <div id="mainStatusPanel" class="status-top-panel status-neutral">ИСПЫТАТЕЛЬНЫЙ СТЕНД ГОТОВ К РАБОТЕ</div>
+
         <div class="controls-section">
             <div class="control-group">
                 <label>Уставка:</label>
@@ -208,21 +288,20 @@
                 <span style="font-size: 0.85em; color: var(--text-muted); margin-left: 5px;">Текущая уставка: <span id="currentSetpoint" style="color: white; font-weight: bold;">--</span></span>
             </div>
             <div class="control-group">
-                <button class="btn-start" onclick="startMonitoring()">Старт</button>
-                <button class="btn-stop" onclick="stopMonitoring()">Стоп</button>
+                <button id="btnStart" class="btn-start" onclick="startMonitoring()">Старт</button>
+                <button id="btnStop" class="btn-stop" onclick="stopMonitoring()">Стоп</button>
                 <button class="btn-reset" onclick="resetSystem()">Сброс</button>
             </div>
             <div class="control-group">
                 <button id="btnLog" class="btn-dark" onclick="toggleLogs()">Журнал</button>
                 <button id="btnSound" class="btn-dark" onclick="toggleSound()" title="Звук">🔊</button>
             </div>
-        </div>
+        </div> 
 
-        <div class="dashboard-top">
+        <div class="dashboard-top with-logs">
             <div class="sensor-main">
                 <h2>Датчик Давления</h2>
-                <div id="statusBadge" class="status-badge">--</div>
-                <div style="position: relative; width: 100%; flex: 1; min-height: 0;">
+                <div style="position: relative; width: 85%; flex: 1; min-height: 0;">
                     <canvas id="gaugeChart"></canvas>
                 </div>
                 <div class="value-display">
@@ -230,67 +309,87 @@
                 </div>
             </div>
             <div class="stats-panel">
-                <div class="stat-card">
-                    <span class="stat-label">Годных</span>
-                    <span class="stat-value text-green" id="goodCount">0</span>
+                <h2>Статус</h2>
+                <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px">
+                    <div class="status-row" id="st-16384">Испытание запущено</div>
+                    <div class="status-row" id="st-16385">Испытание остановлено</div>
+                    <div class="status-row" id="st-16390">Уставка достигнута</div>
+                    <div class="status-row" id="st-16391">Утечка</div>
+                    <div class="status-row" id="st-16392">Макс. давление превышено</div>
+                    <div class="status-row" id="st-16393">Ошибка датчика давления</div>
+                    <div class="status-row" id="st-16394">Ошибка выхода на уставку</div>
+                    <div class="status-row" id="st-16395">Годен</div>
+                    <div class="status-row" id="st-16396">Не годен</div>
                 </div>
-                <div class="stat-card">
-                    <span class="stat-label">Брак</span>
-                    <span class="stat-value text-red" id="failCount">0</span>
+            </div>
+            
+            <!-- Контейнер журнала -->
+            <div id="logContainer" style="display:flex; flex-direction: column; height: 0; min-height: 100%; overflow: hidden;">
+                <div class="log-header">
+                    <div class="log-row-group" style="justify-content: space-between;">
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <input type="file" id="logFileInput" style="display:none" accept=".csv,.log,.txt" onchange="loadLocalLog(this)">
+                            <button onclick="downloadLogs()" title="Скачать" style="padding: 2px 6px; font-size: 10px; color: #58a6ff; border-color: rgba(88, 166, 255, 0.5);">💾</button>
+                            <button onclick="document.getElementById('logFileInput').click()" title="Открыть файл" style="padding: 2px 6px; font-size: 10px; color: #d29922; border-color: rgba(210, 153, 34, 0.5);">📂</button>
+                            <button onclick="clearLogs()" title="Очистить" style="padding: 2px 6px; font-size: 10px; color: #f2495c; border-color: rgba(242, 73, 92, 0.5);">🗑️</button>
+                        </div>
+                        <div style="display: flex; gap: 5px; align-items: center;">
+                            <button id="btnPrevPage" onclick="changePage(-1)" style="padding: 2px 6px; font-size: 10px;">&lt;</button>
+                            <span id="logPageDisplay" style="font-size: 10px; line-height: 20px;">1</span>
+                            <button id="btnNextPage" onclick="changePage(1)" style="padding: 2px 6px; font-size: 10px;">&gt;</button>
+                            <button onclick="changeFontSize(1)" title="Увеличить шрифт" style="padding: 2px 6px; font-size: 10px; color: #8b949e;">A+</button>
+                            <button onclick="changeFontSize(-1)" title="Уменьшить шрифт" style="padding: 2px 6px; font-size: 10px; color: #8b949e;">A-</button>
+                            <button onclick="resetFontSize()" title="Сбросить размер шрифта" style="padding: 2px 6px; font-size: 10px; color: #8b949e;">A0</button>
+                            <button onclick="toggleFullscreen()" title="На весь экран" style="padding: 2px 6px; font-size: 10px; color: #8b949e;">⛶</button>
+                            <button onclick="toggleLogs()" title="Закрыть" style="padding: 2px 6px; font-size: 10px; color: #8b949e;">✕</button>
+                        </div>
+                    </div>
+                    <div class="log-row-group">
+                        <select id="sortSelect" onchange="changeSort()" style="padding: 2px; font-size: 10px; width: 60px;">
+                            <option value="desc">Новые</option>
+                            <option value="asc">Старые</option>
+                        </select>
+                        <input type="date" id="logDateFrom" title="С даты" onchange="filterLogs()" style="padding: 2px; font-size: 10px; width: 80px; font-family: 'JetBrains Mono';">
+                        <input type="date" id="logDateTo" title="По дату" onchange="filterLogs()" style="padding: 2px; font-size: 10px; width: 80px; font-family: 'JetBrains Mono';">
+                        <input type="text" id="logFilter" placeholder="Фильтр..." style="width: 100px; font-size: 10px; padding: 2px;" oninput="filterLogs()">
+                    </div>
+                </div>
+                <div id="logContent" style="flex: 1; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8b949e;"></div>
+                <div style="margin-top: 8px; border-top: 1px solid #30363d; padding-top: 8px; display: flex; justify-content: flex-end; align-items: center; font-size: 11px; font-family: 'JetBrains Mono'; gap: 10px; color: #8b949e;">
+                    <span style="white-space: nowrap;">Всего: <span id="logTotal">0</span></span>
+                    <select id="pageSizeSelect" onchange="changePageSize()" style="padding: 2px; font-size: 10px;">
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="500">500</option>
+                        <option value="1000000">Все</option>
+                    </select>
                 </div>
             </div>
         </div>
         
         <div class="chart-container">
-            <div style="display: flex; justify-content: flex-end; margin-bottom: 10px;">
-                <button onclick="zoomChart(1.1)" class="btn-gray" title="Увеличить масштаб" style="font-size: 11px; padding: 4px 10px; margin-right: 5px;">+</button>
-                <button onclick="zoomChart(0.9)" class="btn-gray" title="Уменьшить масштаб" style="font-size: 11px; padding: 4px 10px; margin-right: 10px;">-</button>
-                <button onclick="chart.resetZoom()" class="btn-gray" style="font-size: 11px; padding: 4px 10px;">Сброс зума</button>
-                <button id="btnExportHistory" onclick="downloadHistory()" class="btn-gray" style="font-size: 11px; padding: 4px 10px; margin-left: 10px; color: #58a6ff; border-color: rgba(88, 166, 255, 0.3);">Экспорт истории</button>
-                <button onclick="clearHistory()" class="btn-gray" style="font-size: 11px; padding: 4px 10px; margin-left: 10px; color: #f2495c; border-color: rgba(242, 73, 92, 0.3);">Очистить историю</button>
+            <div style="position: relative; display: flex; justify-content: flex-end; align-items: center; margin-bottom: 10px;">
+                <h2 style="margin: 0; position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap;">График показаний датчика давления</h2>
+                <div style="display: flex; position: relative; z-index: 1;">
+                    <button onclick="zoomChart(1.1)" class="btn-gray" title="Увеличить масштаб" style="font-size: 11px; padding: 4px 10px; margin-right: 5px; color: #8b949e;">Z+</button>
+                    <button onclick="zoomChart(0.9)" class="btn-gray" title="Уменьшить масштаб" style="font-size: 11px; padding: 4px 10px; margin-right: 10px; color: #8b949e;">Z-</button>
+                    <button onclick="resetChartZoom()" class="btn-gray" style="font-size: 11px; padding: 4px 10px; color: #8b949e;">Z0</button>
+                    <button id="btnExportHistory" onclick="downloadHistory()" class="btn-gray" style="font-size: 11px; padding: 4px 10px; margin-left: 10px; color: #58a6ff; border-color: rgba(88, 166, 255, 0.3);">💾</button>
+                    <button onclick="clearHistory()" class="btn-gray" style="font-size: 11px; padding: 4px 10px; margin-left: 10px; color: #f2495c; border-color: rgba(242, 73, 92, 0.3);">🗑️</button>
+                </div>
             </div>
             <canvas id="pressureChart"></canvas>
         </div>
 
         <div id="errorList" class="error-list"></div>
-        
-        <!-- Контейнер журнала с пагинацией -->
-        <div id="logContainer" style="display:none; margin-top: 20px; text-align: left;">
-            <div style="margin-bottom: 10px; border-bottom: 1px solid #30363d; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-family: 'JetBrains Mono';">
-                <div>
-                    <span>Всего: <span id="logTotal">0</span></span>
-                    <select id="pageSizeSelect" onchange="changePageSize()" style="margin-left: 10px;">
-                        <option value="20">20</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
-                    <select id="sortSelect" onchange="changeSort()" style="margin-left: 10px;">
-                        <option value="desc">Сначала новые</option>
-                        <option value="asc">Сначала старые</option>
-                    </select>
-                    <input type="text" id="logFilter" placeholder="Фильтр..." style="margin-left: 10px; width: 120px;" oninput="filterLogs()">
-                    <button onclick="clearLogs()" title="Очистить журнал" style="margin-left: 10px; color: #f2495c; border-color: rgba(242, 73, 92, 0.5);">🗑️</button>
-                    <button onclick="downloadLogs()" title="Скачать журнал" style="margin-left: 5px; color: #58a6ff; border-color: rgba(88, 166, 255, 0.5);">💾</button>
-                </div>
-                <div>
-                    <button id="btnPrevPage" onclick="changePage(-1)" style="padding: 4px 10px;">&lt;</button>
-                    <span id="logPageDisplay" style="margin: 0 8px;">1</span>
-                    <button id="btnNextPage" onclick="changePage(1)" style="padding: 4px 10px;">&gt;</button>
-                    <button onclick="changeFontSize(1)" title="Увеличить шрифт" style="margin-left: 10px; padding: 4px 8px; color: #8b949e; border-color: #30363d;">A+</button>
-                    <button onclick="changeFontSize(-1)" title="Уменьшить шрифт" style="margin-left: 5px; padding: 4px 8px; color: #8b949e; border-color: #30363d;">A-</button>
-                    <button onclick="toggleFullscreen()" title="На весь экран" style="margin-left: 10px; padding: 4px 10px; color: #8b949e; border-color: #30363d;">⛶</button>
-                    <button onclick="toggleLogs()" title="Закрыть" style="margin-left: 10px; padding: 4px 10px; color: #8b949e; border-color: #30363d;">✕</button>
-                </div>
-            </div>
-            <div id="logContent" style="height: 320px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8b949e;"></div>
-        </div>
     </div>
 
     <script>
         // Настройки Chart.js по умолчанию для темной темы (как в source)
         Chart.defaults.color = '#8b949e';
         Chart.defaults.borderColor = '#30363d';
-        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.font.family = "'JetBrains Mono', monospace";
 
         const totalPoints = 60;
         const writeIndex = 48; // Точка записи данных (80% от ширины)
@@ -398,6 +497,9 @@
             return true;
         }
 
+        // Загрузка сохраненного состояния видимости линий
+        const savedHiddenDatasets = JSON.parse(localStorage.getItem('chartHiddenDatasets') || '[]');
+
         const ctx = document.getElementById('pressureChart').getContext('2d');
         const chart = new Chart(ctx, {
             type: 'line',
@@ -405,6 +507,7 @@
                 labels: new Array(totalPoints).fill(''),
                 datasets: [{
                     label: ' Давление   ',
+                    hidden: savedHiddenDatasets.includes(0),
                     data: new Array(totalPoints).fill(null),
                     borderColor: '#58a6ff',
                     backgroundColor: (ctx) => {
@@ -419,6 +522,7 @@
                     spanGaps: false
                 }, {
                     label: ' Уставка   ',
+                    hidden: savedHiddenDatasets.includes(1),
                     data: new Array(totalPoints).fill(null),
                     borderColor: '#238636',
                     borderWidth: 2,
@@ -427,6 +531,7 @@
                     spanGaps: false
                 }, {
                     label: ' Максимальное давление   ',
+                    hidden: savedHiddenDatasets.includes(2),
                     data: new Array(totalPoints).fill(null),
                     borderColor: '#f2495c',
                     borderWidth: 2,
@@ -472,6 +577,28 @@
                 },
                 animation: false,
                 plugins: {
+                    legend: {
+                        onClick: (e, legendItem, legend) => {
+                            // Стандартное поведение (скрыть/показать)
+                            Chart.defaults.plugins.legend.onClick(e, legendItem, legend);
+                            // Сохранение состояния
+                            const hiddenIndices = [];
+                            legend.chart.data.datasets.forEach((ds, i) => {
+                                if (!legend.chart.isDatasetVisible(i)) {
+                                    hiddenIndices.push(i);
+                                }
+                            });
+                            localStorage.setItem('chartHiddenDatasets', JSON.stringify(hiddenIndices));
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#161b22',
+                        titleColor: '#c9d1d9',
+                        bodyColor: '#c9d1d9',
+                        borderColor: '#30363d',
+                        borderWidth: 1,
+                        multiKeyBackground: '#161b22'
+                    },
                     zoom: {
                         zoom: {
                             wheel: { 
@@ -579,19 +706,27 @@
             plugins: [gaugeNeedle]
         });
 
+        let clientConnectionLostTime = null;
+        let serverWaitingSeconds = 0;
+        let isDeviceConnected = true;
+        let isServerReachable = true;
+
         async function updateData() {
             try {
                 const response = await fetch('/api/data');
                 const data = await response.json();
+                
+                isServerReachable = true;
+                clientConnectionLostTime = null;
+                isDeviceConnected = data.isConnected;
+                serverWaitingSeconds = data.waitingSeconds;
 
                 const overlay = document.getElementById('overlay');
                 
                 // Логика оверлея: если нет связи, показываем экран ожидания
                 if (!data.isConnected) {
                     overlay.style.display = 'flex';
-                    document.getElementById('waitText').style.display = 'block';
                     document.getElementById('errText').style.display = 'none';
-                    document.getElementById('timer').innerText = data.waitingSeconds;
                     
                     // Сдвигаем график (создаем разрыв)
                     chart.data.labels.shift();
@@ -624,16 +759,29 @@
                 if (data.logCount > seenLogCount) {
                     // Если есть новые логи и журнал закрыт -> мигаем
                     if (logContainer.style.display === 'none') {
-                        btnLog.classList.add('btn-flash');
+                        // Определяем максимальный уровень важности среди новых логов
+                        let maxSeverity = 0; // 0: Info, 1: Warning, 2: Error
+                        if (data.recentLogs) {
+                            data.recentLogs.forEach(l => {
+                                if (l.id > seenLogCount) {
+                                    if (l.level === 'ERROR') maxSeverity = Math.max(maxSeverity, 2);
+                                    else if (l.level === 'WARNING') maxSeverity = Math.max(maxSeverity, 1);
+                                }
+                            });
+                        }
+
+                        btnLog.classList.remove('btn-flash-yellow', 'btn-flash-red');
+                        if (maxSeverity === 2) btnLog.classList.add('btn-flash-red');
+                        else if (maxSeverity === 1) btnLog.classList.add('btn-flash-yellow');
                     } else {
                         // Если журнал открыт, считаем, что пользователь видит новые логи
                         seenLogCount = data.logCount;
-                        btnLog.classList.remove('btn-flash');
+                        btnLog.classList.remove('btn-flash-yellow', 'btn-flash-red');
                     }
                 } else if (data.logCount < seenLogCount) {
                     // Если логи были очищены
                     seenLogCount = data.logCount;
-                    btnLog.classList.remove('btn-flash');
+                    btnLog.classList.remove('btn-flash-yellow', 'btn-flash-red');
                 }
 
                 // Если данные еще не получены (null), пропускаем обновление
@@ -652,9 +800,28 @@
                 }
                 gaugeChart.update();
 
-                // Обновляем счетчик
-                document.getElementById('goodCount').innerText = data.goodCount;
-                document.getElementById('failCount').innerText = data.failCount;
+                // Обновление статусов в stats-panel
+                const setStatus = (id, isActive, color) => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.className = 'status-row'; // Сброс
+                    if (isActive) el.classList.add(color === 'green' ? 'active-green' : 'active-red');
+                };
+
+                setStatus('st-16384', data.start === 1, 'green');
+                setStatus('st-16385', data.stop === 1, 'red');
+                setStatus('st-16390', data.setpointReached === 1, 'green');
+                setStatus('st-16391', data.utechka === 1, 'red');
+                setStatus('st-16392', data.overPressure === 1, 'red');
+                setStatus('st-16393', data.errDD === 1, 'red');
+                setStatus('st-16394', data.errSetpoint === 1, 'red');
+                setStatus('st-16395', data.success === 1, 'green');
+                setStatus('st-16396', data.fail === 1, 'red');
+
+                // Блокировка кнопок Старт/Стоп при завершении испытания (Годен/Не годен)
+                const isLocked = data.success === 1 || data.fail === 1;
+                document.getElementById('btnStart').disabled = isLocked || (data.start === 1);
+                document.getElementById('btnStop').disabled = isLocked || (data.stop === 1);
 
                 // Отображаем текущую уставку
                 if (data.setpoint !== null) {
@@ -667,34 +834,34 @@
                 }
 
                 // Обновляем индикатор статуса
-                const statusBadge = document.getElementById('statusBadge');
+                const statusPanel = document.getElementById('mainStatusPanel');
                 // Сброс классов и стилей
-                statusBadge.className = 'status-badge';
-                statusBadge.style = '';
+                statusPanel.className = 'status-top-panel';
+                statusPanel.style = '';
 
                 if (data.fail === 1) {
                     document.body.classList.add('alarm-bg');
-                    statusBadge.innerText = "НЕ ГОДЕН";
-                    statusBadge.classList.add('status-error');
+                    statusPanel.innerText = "НЕ ГОДЕН";
+                    statusPanel.classList.add('status-error');
                 } else if (data.overPressure === 1) {
                     document.body.classList.add('alarm-bg');
-                    statusBadge.innerText = "АВАРИЯ ДАВЛЕНИЯ";
-                    statusBadge.classList.add('status-error');
+                    statusPanel.innerText = "АВАРИЯ ДАВЛЕНИЯ";
+                    statusPanel.classList.add('status-error');
                 } else if (data.success === 1) {
                     document.body.classList.remove('alarm-bg');
-                    statusBadge.innerText = "ГОДЕН";
-                    statusBadge.classList.add('status-success');
+                    statusPanel.innerText = "ГОДЕН";
+                    statusPanel.classList.add('status-success');
                 } else {
                     document.body.classList.remove('alarm-bg');
                     if (data.start === 1) {
-                        statusBadge.innerText = "РАБОТА";
-                        statusBadge.classList.add('status-success');
+                        statusPanel.innerText = "ИДЁТ ПРОЦЕСС ИСПЫТАНИЯ ИЗДЕЛИЯ";
+                        statusPanel.classList.add('status-success');
                     } else if (data.stop === 1) {
-                        statusBadge.innerText = "ОСТАНОВЛЕНО";
-                        statusBadge.classList.add('status-error');
+                        statusPanel.innerText = "ПРОЦЕСС ИСПЫТАНИЯ ОСТАНОВЛЕН";
+                        statusPanel.classList.add('status-error');
                     } else {
-                        statusBadge.innerText = "ГОТОВ";
-                        statusBadge.classList.add('status-neutral');
+                        statusPanel.innerText = "ИСПЫТАТЕЛЬНЫЙ СТЕНД ГОТОВ К РАБОТЕ";
+                        statusPanel.classList.add('status-neutral');
                     }
                 }
 
@@ -749,9 +916,12 @@
                 }
             } catch (err) { 
                 console.error(err);
+                isServerReachable = false;
+                
+                if (clientConnectionLostTime === null) clientConnectionLostTime = Date.now();
+
                 // Если сервер не отвечает (ошибка сети)
                 document.getElementById('overlay').style.display = 'flex';
-                document.getElementById('waitText').style.display = 'none';
                 document.getElementById('errText').style.display = 'block';
 
                 // Сдвигаем график (создаем разрыв)
@@ -768,11 +938,23 @@
         }
         setInterval(updateData, 500);
 
+        // Отдельный таймер для плавного обновления времени ожидания (100мс)
+        setInterval(() => {
+            const timerSpan = document.getElementById('overlayTimer');
+            if (!isServerReachable && clientConnectionLostTime !== null) {
+                const seconds = Math.floor((Date.now() - clientConnectionLostTime) / 1000);
+                timerSpan.innerText = seconds + ' сек';
+            } else if (!isDeviceConnected) {
+                timerSpan.innerText = serverWaitingSeconds + ' сек';
+            }
+        }, 100);
+
         async function startMonitoring() {
             await fetch('/api/start', { method: 'POST' });
         }
 
         async function stopMonitoring() {
+            if (!confirm('Вы уверены, что хотите остановить испытание?')) return;
             await fetch('/api/stop', { method: 'POST' });
         }
 
@@ -812,12 +994,16 @@
             chart.update();
 
             // Сброс визуальных статусов
-            const statusBadge = document.getElementById('statusBadge');
-            statusBadge.innerText = "ГОТОВ";
-            statusBadge.className = 'status-badge status-neutral';
-            statusBadge.style = '';
+            const statusPanel = document.getElementById('mainStatusPanel');
+            statusPanel.innerText = "ИСПЫТАТЕЛЬНЫЙ СТЕНД ГОТОВ К РАБОТЕ";
+            statusPanel.className = 'status-top-panel status-neutral';
+            statusPanel.style = '';
             document.getElementById('errorList').innerHTML = '';
             document.body.classList.remove('alarm-bg');
+            
+            // Разблокировка кнопок
+            document.getElementById('btnStart').disabled = false;
+            document.getElementById('btnStop').disabled = false;
 
             // Обновляем seenLogCount, чтобы мигание не возобновилось
             try {
@@ -826,7 +1012,7 @@
                 seenLogCount = data.logCount;
             } catch (e) { }
             // Сброс мигания кнопки журнала
-            document.getElementById('btnLog').classList.remove('btn-flash');
+            document.getElementById('btnLog').classList.remove('btn-flash-yellow', 'btn-flash-red');
         }
 
         let logInterval = null;
@@ -840,6 +1026,8 @@
         let isSetpointInitialized = false;
         let currentFontSize = 12;
         let isSoundEnabled = true;
+        let isLocalLog = false;
+        let localLogData = [];
 
         // Восстановление уставки из localStorage при загрузке
         const savedSetpoint = localStorage.getItem('savedSetpoint');
@@ -854,19 +1042,106 @@
             btn.innerText = isSoundEnabled ? '🔊' : '🔇';
         }
 
+        async function loadLocalLog(input) {
+            if (input.files && input.files[0]) {
+                const formData = new FormData();
+                formData.append('file', input.files[0]);
+
+                try {
+                    const response = await fetch('/api/logs/upload', { method: 'POST', body: formData });
+                    if (response.ok) {
+                        isLocalLog = false; // Возвращаемся в онлайн режим
+                        currentPage = 1;
+                        previousLogs = null;
+                        fetchLogs(); // Обновляем список с сервера
+                    } else {
+                        alert('Ошибка загрузки файла.');
+                    }
+                } catch (e) { alert('Ошибка сети.'); }
+            }
+            input.value = ''; // Сброс, чтобы можно было выбрать тот же файл снова
+        }
+
         async function fetchLogs() {
             const contentDiv = document.getElementById('logContent');
-            const filter = document.getElementById('logFilter').value;
-            try {
-                const url = `/api/logs?filter=${encodeURIComponent(filter)}&page=${currentPage}&pageSize=${pageSize}&sort=${sortOrder}`;
-                const res = await fetch(url);
-                const data = await res.json();
+            const filterInput = document.getElementById('logFilter').value;
+            const dateFrom = document.getElementById('logDateFrom').value;
+            const dateTo = document.getElementById('logDateTo').value;
+            
+            let logs = [];
+            let total = 0;
+
+            if (isLocalLog) {
+                // Логика для локального файла
+                let filtered = localLogData;
+                if (filterInput) {
+                    const f = filterInput.toLowerCase();
+                    filtered = localLogData.filter(l => l.toLowerCase().includes(f));
+                }
+
+                if (dateFrom || dateTo) {
+                    filtered = filtered.filter(l => {
+                        const match = l.match(/^(\d{2})\.(\d{2})\.(\d{4})/); // Ожидаем формат dd.MM.yyyy
+                        if (!match) return false;
+                        const logDate = `${match[3]}-${match[2]}-${match[1]}`; // Преобразуем в yyyy-MM-dd
+                        if (dateFrom && logDate < dateFrom) return false;
+                        if (dateTo && logDate > dateTo) return false;
+                        return true;
+                    });
+                }
+                
+                // Сортировка (в файле обычно старые сверху)
+                if (sortOrder === 'desc') {
+                    filtered = [...filtered].reverse();
+                }
+                
+                total = filtered.length;
+                totalPages = Math.ceil(total / pageSize) || 1;
+                
+                const start = (currentPage - 1) * pageSize;
+                // Приводим к формату объекта, как с сервера
+                logs = filtered.slice(start, start + pageSize).map(l => {
+                    const parts = l.split(';');
+                    let level = 'INFO';
+                    let display = l.replace(/;/g, ': ');
+                    
+                    if (parts.length >= 3) {
+                        level = parts[1];
+                        display = `${parts[0]}: ${parts.slice(2).join(';')}`;
+                    }
+                    
+                    return { 
+                        raw: l, 
+                        display: display, 
+                        level: level 
+                    };
+                });
+                
+                updateLogUI(logs, total, currentPage);
+            } else {
+                // Логика для сервера
+                try {
+                    let url = `/api/logs?filter=${encodeURIComponent(filterInput)}&page=${currentPage}&pageSize=${pageSize}&sort=${sortOrder}`;
+                    if (dateFrom) url += `&from=${dateFrom}`;
+                    if (dateTo) url += `&to=${dateTo}`;
+
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    
+                    totalPages = Math.ceil(data.total / pageSize) || 1;
+                    updateLogUI(data.logs, data.total, data.page);
+                } catch (e) {
+                    contentDiv.innerText = 'Ошибка загрузки логов';
+                }
+            }
+        }
+
+        function updateLogUI(logs, total, page) {
+            const contentDiv = document.getElementById('logContent');
                 
                 // Обновляем инфо о страницах
-                document.getElementById('logTotal').innerText = data.total;
-                document.getElementById('logPageDisplay').innerText = data.page;
-                
-                totalPages = Math.ceil(data.total / pageSize) || 1;
+                document.getElementById('logTotal').innerText = total;
+                document.getElementById('logPageDisplay').innerText = page;
                 
                 const btnPrev = document.getElementById('btnPrevPage');
                 const btnNext = document.getElementById('btnNextPage');
@@ -875,23 +1150,34 @@
                 btnNext.disabled = currentPage >= totalPages;
                 btnNext.style.opacity = currentPage >= totalPages ? "0.5" : "1";
                 
-                const logs = data.logs;
-
-                // Подсветка новых записей работает только на первой странице
-                if (previousLogs === null || currentPage !== 1) {
-                    contentDiv.innerHTML = logs.length > 0 ? logs.join('<br>') : 'Журнал пуст';
-                } else {
-                    const html = logs.map(line => {
-                        return !previousLogs.includes(line) ? `<span class="new-log">${line}</span>` : line;
-                    }).join('<br>');
-                    contentDiv.innerHTML = logs.length > 0 ? html : 'Журнал пуст';
+                if (logs.length === 0) {
+                    contentDiv.innerHTML = 'Журнал пуст';
+                    return;
                 }
-                
-                if (currentPage === 1) previousLogs = logs;
 
-            } catch (e) {
-                contentDiv.innerText = 'Ошибка загрузки логов';
-            }
+                const html = logs.map(item => {
+                    const lineRaw = item.raw;
+                    const lineDisplay = item.display;
+                    const level = item.level;
+                    const safeRaw = lineRaw.replace(/'/g, "\\'").replace(/"/g, '&quot;'); // Экранирование для onclick
+                    
+                    let levelClass = '';
+                    if (level === 'INFO') levelClass = 'log-info';
+                    else if (level === 'WARNING') levelClass = 'log-warning';
+                    else if (level === 'ERROR') levelClass = 'log-error';
+
+                    // Проверка на новизну (только для серверных логов на 1 странице)
+                    let isNew = false;
+                    if (!isLocalLog && currentPage === 1 && previousLogs) {
+                        isNew = !previousLogs.some(p => p.raw === lineRaw);
+                    }
+                    const contentHtml = isNew ? `<span class="new-log">${lineDisplay}</span>` : lineDisplay;
+                    return `<div class="log-row ${levelClass}"><span>${contentHtml}</span><button onclick="deleteLog('${safeRaw}')" class="btn-delete-log" title="Удалить">×</button></div>`;
+                }).join('');
+                
+                contentDiv.innerHTML = html;
+                
+                if (currentPage === 1 && !isLocalLog) previousLogs = logs;
         }
 
         function toggleFullscreen() {
@@ -900,23 +1186,29 @@
 
         function toggleLogs() {
             const container = document.getElementById('logContainer');
+            const dashboardTop = document.querySelector('.dashboard-top');
+            
             if (container.style.display === 'none') {
-                container.style.display = 'block';
-                // Плавная прокрутка к панели журнала
-                setTimeout(() => container.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                // Показываем журнал
+                container.style.display = 'flex';
+                dashboardTop.classList.add('with-logs');
 
+                isLocalLog = false; // Сброс на серверный режим при открытии
                 document.getElementById('logContent').innerHTML = 'Загрузка...';
                 previousLogs = null;
                 currentPage = 1; // Сброс на первую страницу при открытии
                 fetchLogs();
                 
                 // Сбрас мигания при открытии
-                document.getElementById('btnLog').classList.remove('btn-flash');
+                document.getElementById('btnLog').classList.remove('btn-flash-yellow', 'btn-flash-red');
                 // seenLogCount обновится в следующем цикле updateData
                 
                 logInterval = setInterval(fetchLogs, 2000);
             } else {
+                // Скрываем журнал
                 container.style.display = 'none';
+                dashboardTop.classList.remove('with-logs');
+                
                 container.classList.remove('fullscreen');
                 if (logInterval) clearInterval(logInterval);
             }
@@ -957,8 +1249,48 @@
             }
         }
 
-        function downloadLogs() {
-            window.location.href = '/api/logs/download';
+        async function deleteLog(line) {
+            if (!confirm('Удалить эту запись?')) return;
+            
+            if (isLocalLog) {
+                // Удаление из локального массива
+                const idx = localLogData.indexOf(line);
+                if (idx > -1) {
+                    localLogData.splice(idx, 1);
+                    fetchLogs();
+                }
+            } else {
+                // Удаление с сервера
+                try {
+                    const res = await fetch('/api/logs/delete', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ line: line })
+                    });
+                    if (res.ok) {
+                        fetchLogs();
+                    } else { alert('Ошибка удаления'); }
+                } catch (e) { alert('Ошибка сети'); }
+            }
+        }
+
+        async function downloadLogs() {
+            try {
+                const response = await fetch('/api/logs/download');
+                if (!response.ok) throw new Error('Log file not found');
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                const now = new Date();
+                a.download = `Журнал событий ${now.toLocaleDateString('ru-RU').replace(/\./g, '-')} ${now.toLocaleTimeString('ru-RU').replace(/:/g, '-')}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+            } catch (e) { alert('Ошибка скачивания журнала'); }
         }
 
         async function downloadHistory() {
@@ -976,7 +1308,7 @@
                 a.style.display = 'none';
                 a.href = url;
                 const now = new Date();
-                a.download = `История_графика_${now.toLocaleDateString('ru-RU').replace(/\./g, '-')}_${now.toLocaleTimeString('ru-RU').replace(/:/g, '-')}.csv`;
+                a.download = `График давления ${now.toLocaleDateString('ru-RU').replace(/\./g, '-')} ${now.toLocaleTimeString('ru-RU').replace(/:/g, '-')}.xlsx`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
@@ -998,6 +1330,11 @@
             currentFontSize += delta;
             if (currentFontSize < 10) currentFontSize = 10;
             if (currentFontSize > 24) currentFontSize = 24;
+            document.getElementById('logContent').style.fontSize = currentFontSize + 'px';
+        }
+
+        function resetFontSize() {
+            currentFontSize = 12;
             document.getElementById('logContent').style.fontSize = currentFontSize + 'px';
         }
 
@@ -1053,6 +1390,13 @@
             chart.update();
         }
 
+        function resetChartZoom() {
+            chart.resetZoom();
+            delete chart.options.scales.x.min;
+            delete chart.options.scales.x.max;
+            chart.update();
+        }
+
         // Обновление подсказки с размером файла при наведении на кнопку экспорта
         document.getElementById('btnExportHistory').addEventListener('mouseenter', async function() {
             try {
@@ -1070,6 +1414,12 @@
                 }
             } catch (e) { }
         });
+
+        // Запуск обновления журнала при загрузке страницы
+        if (document.getElementById('logContainer').style.display !== 'none') {
+            fetchLogs();
+            logInterval = setInterval(fetchLogs, 2000);
+        }
     </script>
 </body>
 </html>

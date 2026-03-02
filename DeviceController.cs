@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace OwenModbusMonitor
 {
@@ -14,9 +15,11 @@ namespace OwenModbusMonitor
         public int LogCount { get; private set; } = 0;
         public DateTime? ConnectionLostTime { get; private set; }
         private const string CountersFileName = "counters.txt";
-        private const string ErrorLogFileName = "errors.log";
+        private const string ErrorLogFileName = "errors.csv";
         private const string HistoryFileName = "history.csv";
         private DateTime _lastHistoryLog = DateTime.MinValue;
+        private readonly object _logLock = new object();
+        private readonly List<LogMetadata> _recentLogs = new();
 
         public DeviceController(string ip, int port)
         {
@@ -31,6 +34,7 @@ namespace OwenModbusMonitor
                 {
                     GoodCount++; 
                     SaveCounters();
+                    LogEvent("Изделие годно", "WARNING");
                 }
             };
             Fail.ValueChanged += (s, val) => 
@@ -39,15 +43,19 @@ namespace OwenModbusMonitor
                 {
                     FailCount++; 
                     SaveCounters();
-                    LogError("Изделие не годно");
+                    LogEvent("Изделие не годно", "WARNING");
                 }
             };
 
             // Подписка на события ошибок для логирования
-            Utechka.ValueChanged += (s, val) => { if (val == 1) LogError("Обнаружена утечка"); };
-            OverPress.ValueChanged += (s, val) => { if (val == 1) LogError("Превышение давления"); };
-            ErrDD.ValueChanged += (s, val) => { if (val == 1) LogError("Ошибка датчика давления"); };
-            ErrSetpoint.ValueChanged += (s, val) => { if (val == 1) LogError("Ошибка выхода на уставку"); };
+            StartVar.ValueChanged += (s, val) => { if (val == 1) LogEvent("Начало испытания", "INFO"); };
+            StopVar.ValueChanged += (s, val) => { if (val == 1) LogEvent("Отмена испытания", "INFO"); };
+            SetpointReached.ValueChanged += (s, val) => { if (val == 1) LogEvent("Уставка достигнута", "WARNING"); };
+            Ustavka.ValueChanged += (s, val) => LogEvent($"Задана уставка: {val}", "INFO");
+            Utechka.ValueChanged += (s, val) => { if (val == 1) LogEvent("Обнаружена утечка", "ERROR"); };
+            OverPress.ValueChanged += (s, val) => { if (val == 1) LogEvent("Превышение давления", "ERROR"); };
+            ErrDD.ValueChanged += (s, val) => { if (val == 1) LogEvent("Ошибка датчика давления", "ERROR"); };
+            ErrSetpoint.ValueChanged += (s, val) => { if (val == 1) LogEvent("Ошибка выхода на уставку", "ERROR"); };
         }
 
         private CancellationTokenSource? _cts;
@@ -116,7 +124,7 @@ namespace OwenModbusMonitor
                 if (!_modbusService.IsConnected)
                 {
                     if (ConnectionLostTime == null) ConnectionLostTime = DateTime.Now;
-                    try { _modbusService.Connect(); ConnectionLostTime = null; }
+                    try { _modbusService.Connect(); }
                     catch { await Task.Delay(1000, token); continue; }
                 }
 
@@ -220,6 +228,14 @@ namespace OwenModbusMonitor
             {
                 await _modbusService.WriteShortAsync(UnitId, Addr_Start, 0);
                 await _modbusService.WriteShortAsync(UnitId, Addr_Stop, 0);
+                
+                await _modbusService.WriteShortAsync(UnitId, Addr_SetpointReached, 0);
+                await _modbusService.WriteShortAsync(UnitId, Addr_Utechka, 0);
+                await _modbusService.WriteShortAsync(UnitId, Addr_OverPress, 0);
+                await _modbusService.WriteShortAsync(UnitId, Addr_ErrDD, 0);
+                await _modbusService.WriteShortAsync(UnitId, Addr_ErrSetpoint, 0);
+                await _modbusService.WriteShortAsync(UnitId, Addr_Success, 0);
+                await _modbusService.WriteShortAsync(UnitId, Addr_Fail, 0);
             }
             finally { _isWriting = false; }
         }
@@ -261,15 +277,20 @@ namespace OwenModbusMonitor
             catch { /* Игнорируем ошибки записи */ }
         }
 
-        private void LogError(string message)
+        private void LogEvent(string message, string level)
         {
-            try
+            lock (_logLock)
             {
-                string logEntry = $"{DateTime.Now}: {message}";
-                File.AppendAllText(ErrorLogFileName, logEntry + Environment.NewLine);
-                LogCount++;
+                try
+                {
+                    string logEntry = $"{DateTime.Now:dd.MM.yyyy HH:mm:ss};{level};{message}";
+                    File.AppendAllText(ErrorLogFileName, logEntry + Environment.NewLine, System.Text.Encoding.UTF8);
+                    LogCount++;
+                    _recentLogs.Add(new LogMetadata(LogCount, level));
+                    if (_recentLogs.Count > 50) _recentLogs.RemoveAt(0);
+                }
+                catch { /* Игнорируем ошибки записи лога */ }
             }
-            catch { /* Игнорируем ошибки записи лога */ }
         }
 
         private void LogHistory(float pressure, float setpoint)
@@ -297,12 +318,56 @@ namespace OwenModbusMonitor
 
         public void ClearLogs()
         {
-            try
+            lock (_logLock)
             {
-                File.WriteAllText(ErrorLogFileName, string.Empty);
-                LogCount = 0;
+                try
+                {
+                    File.WriteAllText(ErrorLogFileName, string.Empty);
+                    LogCount = 0;
+                    _recentLogs.Clear();
+                }
+                catch { /* Игнорируем ошибки */ }
             }
-            catch { /* Игнорируем ошибки */ }
+        }
+
+        public void ImportLogs(string content)
+        {
+            lock (_logLock)
+            {
+                try
+                {
+                    var newLines = content.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+                    // Фильтруем строки с заголовками, чтобы они не попадали в лог как данные
+                    newLines = newLines.Where(l => !l.Contains("Время;Событие") && !l.Contains("Время: Событие") && !l.Contains("Время;Уровень;Событие")).ToArray();
+
+                    if (newLines.Length == 0) return;
+
+                    var existingLines = File.Exists(ErrorLogFileName) ? File.ReadAllLines(ErrorLogFileName) : Array.Empty<string>();
+                    var allLines = newLines.Concat(existingLines).ToArray();
+
+                    File.WriteAllLines(ErrorLogFileName, allLines, System.Text.Encoding.UTF8);
+                    LogCount = allLines.Length;
+                }
+                catch { /* Игнорируем ошибки */ }
+            }
+        }
+
+        public void RemoveLogLine(string lineToRemove)
+        {
+            lock (_logLock)
+            {
+                try
+                {
+                    if (!File.Exists(ErrorLogFileName)) return;
+                    var lines = File.ReadAllLines(ErrorLogFileName).ToList();
+                    if (lines.Remove(lineToRemove))
+                    {
+                        File.WriteAllLines(ErrorLogFileName, lines, System.Text.Encoding.UTF8);
+                        LogCount = lines.Count;
+                    }
+                }
+                catch { /* Игнорируем ошибки */ }
+            }
         }
 
         public void Dispose()
@@ -310,5 +375,15 @@ namespace OwenModbusMonitor
             StopMonitoring();
             _modbusService?.Dispose();
         }
+
+        public IEnumerable<LogMetadata> GetRecentLogs()
+        {
+            lock (_logLock)
+            {
+                return _recentLogs.ToList();
+            }
+        }
     }
+
+    public record LogMetadata(int Id, string Level);
 }
