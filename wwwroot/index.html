@@ -21,7 +21,7 @@
         .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
 
         /* Общий стиль панелей (как .panel в source) */
-        .sensor-main, .stat-card, .chart-container, .controls-section, .stats-panel {
+        .sensor-main, .stat-card, .chart-container, .controls-section, .action-buttons-panel, .status-indicators-panel, .setpoint-control-panel, .emergency-stop-panel, .logo-panel {
             background-color: #161b22;
             border: 1px solid #30363d;
             border-radius: 8px;
@@ -29,10 +29,13 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
-        .sensor-main:hover, .stat-card:hover, .chart-container:hover, .controls-section:hover, #logContainer:hover, .stats-panel:hover {
+        .sensor-main:hover, .stat-card:hover, .chart-container:hover, .controls-section:hover, #logContainer:hover, .action-buttons-panel:hover, .status-indicators-panel:hover, .setpoint-control-panel:hover, .emergency-stop-panel:hover, .logo-panel:hover {
             border-color: #58a6ff;
             box-shadow: 0 6px 16px rgba(0,0,0,0.2);
         }
+
+        .logo-panel img { transition: transform 0.7s ease-in-out, filter 0.3s ease; }
+        .logo-panel:hover img { transform: scale(105%); }
 
         /* Заголовки с точкой (как h3 в source) */
         h2, .stat-label {
@@ -61,10 +64,10 @@
             text-align: center; 
             position: relative; 
             display: flex; 
+            height: 300px;
             flex-direction: column; 
             justify-content: space-between;
             align-items: center;
-            min-height: 300px;
             aspect-ratio: 1 / 1;
             min-width: 0;
         }
@@ -78,9 +81,137 @@
         @media (max-width: 480px) { .value-display { font-size: 3em; } }
         .unit { font-size: 0.4em; color: #8b949e; font-weight: 400; margin-left: 10px; }
 
-        /* Stats */
-        .stats-panel { display: flex; flex-direction: column; align-items: center; position: relative; min-height: 0; min-width: 0; }
+        /* Контейнер для двух новых панелей (кнопки + статусы) */
+        .stats-and-controls-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 16px; /* Отступ между верхней и нижней панелями */
+            min-width: 0; /* Для корректной работы в grid */
+        }
+
+        .sensor-column-wrapper, .log-column-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-width: 0;
+        }
+
+        /* Центрирование заголовков и увеличение кнопок в панели управления */
+        .action-buttons-panel h2, .status-indicators-panel h2, .setpoint-control-panel h2 { justify-content: center; }
+        .action-buttons-panel .control-group-centered { width: 100%; gap: 12px; }
+        .action-buttons-panel button { flex: 1; font-size: 14px; font-weight: 700; text-transform: uppercase; }
         
+        .setpoint-control-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .setpoint-control-panel h2 { margin: 0; font-size: 11px; }
+        
+        .setpoint-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        
+        .current-setpoint-wrapper {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: #8b949e;
+            display: flex;
+            align-items: center;
+            padding: 4px 8px;
+        }
+        
+        .current-setpoint-wrapper::before {
+            content: ''; display: inline-block; width: 8px; height: 8px;
+            background-color: #30363d;
+            border-radius: 50%; margin-right: 12px;
+            box-shadow: none;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        .current-setpoint-wrapper.active-green::before {
+            background-color: #238636; box-shadow: 0 0 8px rgba(35, 134, 54, 0.6);
+        }
+        .current-setpoint-wrapper.active-red::before {
+            background-color: #f2495c;
+            animation: pulse-dot-red 2s infinite;
+        }
+        
+        @keyframes pulse-dot-red {
+            0% { box-shadow: 0 0 0 0 rgba(242, 73, 92, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(242, 73, 92, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(242, 73, 92, 0); }
+        }
+        
+        .current-setpoint-wrapper span:first-of-type {
+            margin-right: 6px;
+        }
+
+        .setpoint-body {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+        
+        .input-group input {
+            flex: 1;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            color: #e6edf3;
+            padding: 0 10px;
+            height: 26px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .input-group input:focus {
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+        }
+
+        .input-group button {
+            padding: 0 16px;
+            height: 26px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .presets-group {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .btn-preset {
+            flex: 1;
+            background: rgba(48, 54, 61, 0.4);
+            border: 1px solid #30363d;
+            color: #8b949e;
+            font-size: 10px;
+            padding: 2px 0;
+            border-radius: 4px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .btn-preset:hover {
+            background: #30363d;
+            color: #58a6ff;
+            border-color: #58a6ff;
+        }
+
         .status-row {
             font-family: 'JetBrains Mono', monospace;
             font-size: 14px;
@@ -115,16 +246,13 @@
             padding: 16px;
             text-align: center;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 2px;
             color: #8b949e;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             transition: all 0.3s ease;
-            position: sticky;
-            top: 10px;
-            z-index: 100;
         }
         .status-top-panel.status-error { background: rgba(242, 73, 92, 0.15); color: #f2495c; border-color: #f2495c; box-shadow: 0 0 20px rgba(242, 73, 92, 0.2); }
         .status-top-panel.status-success { background: rgba(46, 160, 67, 0.15); color: #73bf69; border-color: #73bf69; box-shadow: 0 0 20px rgba(46, 160, 67, 0.2); }
@@ -134,6 +262,7 @@
         .controls-section { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: space-between; padding: 12px 20px; }
         .control-group { display: flex; gap: 8px; align-items: center; }
         @media (max-width: 1000px) { .controls-section { flex-direction: column; align-items: stretch; } .control-group { justify-content: center; flex-wrap: wrap; } }
+        .control-group-centered { display: flex; gap: 8px; align-items: center; justify-content: center; }
 
         label { color: #8b949e; font-size: 12px; font-weight: 600; font-family: 'JetBrains Mono', monospace; }
         input, select { 
@@ -165,8 +294,24 @@
         .btn-stop { color: #f2495c; border-color: rgba(242, 73, 92, 0.5); }
         .btn-stop:hover { background: rgba(242, 73, 92, 0.1); border-color: #f2495c; }
 
+        .btn-emergency {
+            width: 100%;
+            height: 100%;
+            background-color: #da3633;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 14px;
+            text-transform: uppercase;
+            border: 1px solid rgba(240, 246, 252, 0.1);
+            border-radius: 6px;
+            letter-spacing: 1px;
+            
+        }
+        .btn-emergency:hover { background-color: #b62324; border-color: #da3633; animation: pulse-red 2s infinite;}
+        .btn-emergency:active { transform: scale(0.98); }
+
         /* Chart */
-        canvas { max-height: 300px; width: 100%; }
+        canvas { max-height: 400px; width: 100%; }
 
         /* Logs & Errors */
         @keyframes flash-red-bg { 0% { background-color: #0d1117; } 50% { background-color: #2a0f0f; } 100% { background-color: #0d1117; } }
@@ -185,6 +330,12 @@
         @keyframes flash-red { 0% { border-color: #30363d; } 50% { border-color: #f2495c; color: #f2495c; } 100% { border-color: #30363d; } }
         .btn-flash-yellow { animation: flash-yellow 1s infinite; }
         .btn-flash-red { animation: flash-red 1s infinite; }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(218, 54, 51, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(218, 54, 51, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(218, 54, 51, 0); }
+        }
         
         /* Оверлей ожидания */
         #overlay {
@@ -260,6 +411,29 @@
         #logContainer.fullscreen .log-row-group {
             justify-content: flex-end !important;
         }
+
+        /* Modal Styles */
+        .modal {
+            display: none; position: fixed; z-index: 3000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background-color: #161b22; border: 1px solid #30363d; border-radius: 8px;
+            padding: 24px; width: 90%; max-width: 400px;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.5); position: relative; text-align: center;
+        }
+        .close-modal {
+            position: absolute; top: 10px; right: 15px;
+            color: #8b949e; font-size: 24px; cursor: pointer; transition: color 0.2s;
+        }
+        .close-modal:hover { color: #f2495c; }
+
+        /* Drag and Drop */
+        .draggable { cursor: grab; }
+        .draggable:active { cursor: grabbing; }
+        .draggable.dragging { opacity: 0.4; border: 2px dashed #58a6ff; box-shadow: none; }
     </style>
 </head>
 <body>
@@ -270,61 +444,95 @@
         <p id="errText" style="display: none; color: #f2495c; font-weight: bold;">Ошибка связи с сервером</p>
     </div>
 
+    <!-- Модальное окно "О программе" -->
+    <div id="aboutModal" class="modal" onclick="if(event.target === this) closeAboutModal()">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeAboutModal()">&times;</span>
+            <img src="img/logo.png" alt="Logo" style="width: 64px; margin-bottom: 16px;">
+            <h2 style="justify-content: center; margin-bottom: 8px;">Owen Modbus Monitor</h2>
+            <p style="color: #8b949e; font-size: 12px; margin-bottom: 20px;">Версия 1.0.0</p>
+            <p style="font-size: 13px; line-height: 1.5;">
+                Система мониторинга и управления стендом гидравлических испытаний.<br>
+                Разработано для контроллера ПР-103.
+            </p>
+            <div style="margin-top: 24px; font-size: 11px; color: #58a6ff;">&copy; 2026</div>
+        </div>
+    </div>
+
     <div class="container">
-        <div id="mainStatusPanel" class="status-top-panel status-neutral">ИСПЫТАТЕЛЬНЫЙ СТЕНД ГОТОВ К РАБОТЕ</div>
-
-        <div class="controls-section">
-            <div class="control-group">
-                <label>Уставка:</label>
-                <input type="number" id="setpointInput" step="0.1" min="0" max="50" style="width: 70px;">
-                <select onchange="document.getElementById('setpointInput').value = this.value">
-                    <option value="">Пресеты...</option>
-                    <option value="6.3">6.3</option>
-                    <option value="16">16</option>
-                    <option value="35">35</option>
-                    <option value="50">50</option>
-                </select>
-                <button onclick="sendSetpoint()" class="btn-primary">OK</button>
-                <span style="font-size: 0.85em; color: var(--text-muted); margin-left: 5px;">Текущая уставка: <span id="currentSetpoint" style="color: white; font-weight: bold;">--</span></span>
-            </div>
-            <div class="control-group">
-                <button id="btnStart" class="btn-start" onclick="startMonitoring()">Старт</button>
-                <button id="btnStop" class="btn-stop" onclick="stopMonitoring()">Стоп</button>
-                <button class="btn-reset" onclick="resetSystem()">Сброс</button>
-            </div>
-            <div class="control-group">
-                <button id="btnLog" class="btn-dark" onclick="toggleLogs()">Журнал</button>
-                <button id="btnSound" class="btn-dark" onclick="toggleSound()" title="Звук">🔊</button>
-            </div>
-        </div> 
-
-        <div class="dashboard-top with-logs">
-            <div class="sensor-main">
-                <h2>Датчик Давления</h2>
-                <div style="position: relative; width: 85%; flex: 1; min-height: 0;">
-                    <canvas id="gaugeChart"></canvas>
+        <div class="dashboard-top with-logs sortable-list horizontal-sort">
+            <div class="sensor-column-wrapper draggable sortable-list" draggable="false">
+                <div class="draggable" draggable="false" style="display: flex; gap: 16px;">
+                    <div class="logo-panel" style="flex: 1; display: flex; align-items: center; justify-content: center; min-height: 103px; max-width: 103px; cursor: pointer;" onclick="openAboutModal()">
+                        <img src="img/logo.png" alt="Logo" style="max-width: 100%; max-height: 100px; object-fit: contain;">
+                    </div>
+                    <div style="flex: 1; position: relative;">
+                        <div id="setpointPanel" class="setpoint-control-panel" style="width: 100%; min-width: 0; min-height: 103px; height: 100%; box-sizing: border-box;">
+                    <div class="setpoint-header">
+                        <h2>Уставка давления</h2>
+                    </div>
+                    <div class="setpoint-body">
+                        <div class="input-group">
+                            <input type="number" id="setpointInput" step="0.1" min="0" max="50" placeholder="0.0">
+                            <button onclick="sendSetpoint()" class="btn-primary">Применить</button>
+                        </div>
+                        <div class="presets-group" style="flex-wrap: wrap;">
+                            <button class="btn-preset" style="flex: 1 1 40%;" onclick="document.getElementById('setpointInput').value = 6.3">6.3</button>
+                            <button class="btn-preset" style="flex: 1 1 40%;" onclick="document.getElementById('setpointInput').value = 16">16</button>
+                            <button class="btn-preset" style="flex: 1 1 40%;" onclick="document.getElementById('setpointInput').value = 35">35</button>
+                            <button class="btn-preset" style="flex: 1 1 40%;" onclick="document.getElementById('setpointInput').value = 50">50</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="value-display">
-                    <span id="pressureValue">--</span>
+                <div id="emergencyPanelTop" class="emergency-stop-panel" style="display:none; height: 100%; width: 100%; box-sizing: border-box;">
+                    <button class="btn-emergency" onclick="emergencyStop()">АВАРИЙНАЯ ОСТАНОВКА</button>
                 </div>
-            </div>
-            <div class="stats-panel">
-                <h2>Статус</h2>
-                <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px">
-                    <div class="status-row" id="st-16384">Испытание запущено</div>
-                    <div class="status-row" id="st-16385">Испытание остановлено</div>
-                    <div class="status-row" id="st-16390">Уставка достигнута</div>
-                    <div class="status-row" id="st-16391">Утечка</div>
-                    <div class="status-row" id="st-16392">Макс. давление превышено</div>
-                    <div class="status-row" id="st-16393">Ошибка датчика давления</div>
-                    <div class="status-row" id="st-16394">Ошибка выхода на уставку</div>
-                    <div class="status-row" id="st-16395">Годен</div>
-                    <div class="status-row" id="st-16396">Не годен</div>
+                    </div>
+                </div>
+                <div class="sensor-main draggable" draggable="false">
+                    <h2>Датчик Давления</h2>
+                    <div style="position: relative; width: 85%; flex: 1; min-height: 0;">
+                        <canvas id="gaugeChart"></canvas>
+                    </div>
+                    <div class="value-display">
+                        <span id="pressureValue">--</span><span class="unit">бар</span>
+                    </div>
                 </div>
             </div>
             
-            <!-- Контейнер журнала -->
-            <div id="logContainer" style="display:flex; flex-direction: column; height: 0; min-height: 100%; overflow: hidden;">
+            <!-- Новый контейнер для кнопок и статусов -->
+            <div class="stats-and-controls-wrapper draggable sortable-list" draggable="false">
+                <div id="mainStatusPanel" class="status-top-panel status-neutral draggable" draggable="false">ИСПЫТАТЕЛЬНЫЙ СТЕНД ГОТОВ</div>
+                <div class="action-buttons-panel draggable" draggable="false">
+                    <div class="control-group-centered">
+                        <button id="btnStart" class="btn-start" onclick="startMonitoring()">Старт</button>
+                        <button id="btnStop" class="btn-stop" onclick="stopMonitoring()">Стоп</button>
+                        <button class="btn-reset" onclick="resetSystem()">Сброс</button>
+                    </div>
+                </div>
+                <div class="status-indicators-panel draggable" draggable="false" style="min-height: 300px;">
+                    <h2>Статусы</h2>
+                    <div class="current-setpoint-wrapper">
+                        <span>Текущая уставка:</span>
+                        <span id="currentSetpoint" class="val">--</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0px; padding: 0px">
+                        <div class="status-row" id="st-16384">Испытание запущено</div>
+                        <div class="status-row" id="st-16385">Испытание остановлено</div>
+                        <div class="status-row" id="st-16390">Уставка достигнута</div>
+                        <div class="status-row" id="st-16391">Утечка</div>
+                        <div class="status-row" id="st-16392">Макс. давление превышено</div>
+                        <div class="status-row" id="st-16393">Ошибка датчика давления</div>
+                        <div class="status-row" id="st-16394">Ошибка выхода на уставку</div>
+                        <div class="status-row" id="st-16395">Годен</div>
+                        <div class="status-row" id="st-16396">Не годен</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="log-column-wrapper draggable" draggable="false">
+                <!-- Контейнер журнала -->
+                <div id="logContainer" style="display:flex; flex-direction: column; height: 487px; overflow: hidden;">
                 <div class="log-header">
                     <div class="log-row-group" style="justify-content: space-between;">
                         <div style="display: flex; gap: 5px; align-items: center;">
@@ -332,6 +540,7 @@
                             <button onclick="downloadLogs()" title="Скачать" style="padding: 2px 6px; font-size: 10px; color: #58a6ff; border-color: rgba(88, 166, 255, 0.5);">💾</button>
                             <button onclick="document.getElementById('logFileInput').click()" title="Открыть файл" style="padding: 2px 6px; font-size: 10px; color: #d29922; border-color: rgba(210, 153, 34, 0.5);">📂</button>
                             <button onclick="clearLogs()" title="Очистить" style="padding: 2px 6px; font-size: 10px; color: #f2495c; border-color: rgba(242, 73, 92, 0.5);">🗑️</button>
+                            <button id="btnSound" onclick="toggleSound()" title="Звук" style="padding: 2px 6px; font-size: 10px; color: #8b949e;">🔊</button>
                         </div>
                         <div style="display: flex; gap: 5px; align-items: center;">
                             <button id="btnPrevPage" onclick="changePage(-1)" style="padding: 2px 6px; font-size: 10px;">&lt;</button>
@@ -341,7 +550,6 @@
                             <button onclick="changeFontSize(-1)" title="Уменьшить шрифт" style="padding: 2px 6px; font-size: 10px; color: #8b949e;">A-</button>
                             <button onclick="resetFontSize()" title="Сбросить размер шрифта" style="padding: 2px 6px; font-size: 10px; color: #8b949e;">A0</button>
                             <button onclick="toggleFullscreen()" title="На весь экран" style="padding: 2px 6px; font-size: 10px; color: #8b949e;">⛶</button>
-                            <button onclick="toggleLogs()" title="Закрыть" style="padding: 2px 6px; font-size: 10px; color: #8b949e;">✕</button>
                         </div>
                     </div>
                     <div class="log-row-group">
@@ -365,6 +573,7 @@
                         <option value="1000000">Все</option>
                     </select>
                 </div>
+            </div>
             </div>
         </div>
         
@@ -744,44 +953,34 @@
                     overlay.style.display = 'none';
                 }
 
-                // Логика мигания кнопки журнала
+                // Логика мигания кнопки журнала и звуковых оповещений
                 if (seenLogCount === null) seenLogCount = data.logCount; // Инициализация при первом запуске
                 if (lastServerLogCount === -1) lastServerLogCount = data.logCount;
 
-                if (data.logCount > lastServerLogCount) {
+                const isErrorNow = data.fail === 1 || data.overPressure === 1 || data.errDD === 1 || data.errSetpoint === 1 || data.utechka === 1;
+
+                // Звук при переходе в состояние ошибки
+                if (isErrorNow && !wasInErrorState) {
+                    playErrorSound();
+                } 
+                // Звук для нового обычного лога, если это не переход в ошибку
+                else if (data.logCount > lastServerLogCount) {
                     playAlertSound();
                 }
-                lastServerLogCount = data.logCount;
+                
+                wasInErrorState = isErrorNow; // Обновляем состояние ошибки для следующего цикла
+                lastServerLogCount = data.logCount; // Обновляем счетчик логов
 
-                const btnLog = document.getElementById('btnLog');
                 const logContainer = document.getElementById('logContainer');
 
                 if (data.logCount > seenLogCount) {
-                    // Если есть новые логи и журнал закрыт -> мигаем
-                    if (logContainer.style.display === 'none') {
-                        // Определяем максимальный уровень важности среди новых логов
-                        let maxSeverity = 0; // 0: Info, 1: Warning, 2: Error
-                        if (data.recentLogs) {
-                            data.recentLogs.forEach(l => {
-                                if (l.id > seenLogCount) {
-                                    if (l.level === 'ERROR') maxSeverity = Math.max(maxSeverity, 2);
-                                    else if (l.level === 'WARNING') maxSeverity = Math.max(maxSeverity, 1);
-                                }
-                            });
-                        }
-
-                        btnLog.classList.remove('btn-flash-yellow', 'btn-flash-red');
-                        if (maxSeverity === 2) btnLog.classList.add('btn-flash-red');
-                        else if (maxSeverity === 1) btnLog.classList.add('btn-flash-yellow');
-                    } else {
-                        // Если журнал открыт, считаем, что пользователь видит новые логи
+                    // Если журнал открыт, считаем, что пользователь видит новые логи
+                    if (logContainer.style.display !== 'none') {
                         seenLogCount = data.logCount;
-                        btnLog.classList.remove('btn-flash-yellow', 'btn-flash-red');
-                    }
+                    } 
                 } else if (data.logCount < seenLogCount) {
                     // Если логи были очищены
                     seenLogCount = data.logCount;
-                    btnLog.classList.remove('btn-flash-yellow', 'btn-flash-red');
                 }
 
                 // Если данные еще не получены (null), пропускаем обновление
@@ -831,6 +1030,18 @@
                         document.getElementById('setpointInput').value = data.setpoint;
                         isSetpointInitialized = true;
                     }
+                    
+                    // Логика цвета точки уставки
+                    const spWrapper = document.querySelector('.current-setpoint-wrapper');
+                    spWrapper.classList.remove('active-green', 'active-red');
+                    
+                    if (data.pressure !== null && data.setpoint > 0) {
+                        if (data.pressure >= data.setpoint * 1.05) {
+                            spWrapper.classList.add('active-red');
+                        } else if (data.pressure >= data.setpoint * 0.95) {
+                            spWrapper.classList.add('active-green');
+                        }
+                    }
                 }
 
                 // Обновляем индикатор статуса
@@ -854,13 +1065,13 @@
                 } else {
                     document.body.classList.remove('alarm-bg');
                     if (data.start === 1) {
-                        statusPanel.innerText = "ИДЁТ ПРОЦЕСС ИСПЫТАНИЯ ИЗДЕЛИЯ";
+                        statusPanel.innerText = "ИДЁТ ПРОЦЕСС ИСПЫТАНИЯ";
                         statusPanel.classList.add('status-success');
                     } else if (data.stop === 1) {
                         statusPanel.innerText = "ПРОЦЕСС ИСПЫТАНИЯ ОСТАНОВЛЕН";
                         statusPanel.classList.add('status-error');
                     } else {
-                        statusPanel.innerText = "ИСПЫТАТЕЛЬНЫЙ СТЕНД ГОТОВ К РАБОТЕ";
+                        statusPanel.innerText = "ИСПЫТАТЕЛЬНЫЙ СТЕНД ГОТОВ";
                         statusPanel.classList.add('status-neutral');
                     }
                 }
@@ -891,6 +1102,17 @@
                 // Устанавливаем максимум оси Y равным уставке * 1.5
                 if (data.setpoint !== null && data.setpoint > 0) {
                     chart.options.scales.y.max = data.setpoint * 1.5;
+                }
+
+                // Переключение панели уставки на аварийную кнопку при старте
+                const spPanel = document.getElementById('setpointPanel');
+                const emPanel = document.getElementById('emergencyPanelTop');
+                if (data.start === 1) {
+                    if (spPanel.style.display !== 'none') spPanel.style.display = 'none';
+                    if (emPanel.style.display === 'none') emPanel.style.display = 'block';
+                } else {
+                    if (spPanel.style.display === 'none') spPanel.style.display = 'block';
+                    if (emPanel.style.display !== 'none') emPanel.style.display = 'none';
                 }
 
                 // Если статус "Годен" или "Не годен", график не обновляем (замораживаем)
@@ -958,6 +1180,10 @@
             await fetch('/api/stop', { method: 'POST' });
         }
 
+        async function emergencyStop() {
+            await fetch('/api/stop', { method: 'POST' });
+        }
+
         async function sendSetpoint() {
             const input = document.getElementById('setpointInput');
             let val = parseFloat(input.value);
@@ -995,7 +1221,7 @@
 
             // Сброс визуальных статусов
             const statusPanel = document.getElementById('mainStatusPanel');
-            statusPanel.innerText = "ИСПЫТАТЕЛЬНЫЙ СТЕНД ГОТОВ К РАБОТЕ";
+            statusPanel.innerText = "ИСПЫТАТЕЛЬНЫЙ СТЕНД ГОТОВ";
             statusPanel.className = 'status-top-panel status-neutral';
             statusPanel.style = '';
             document.getElementById('errorList').innerHTML = '';
@@ -1011,8 +1237,6 @@
                 const data = await response.json();
                 seenLogCount = data.logCount;
             } catch (e) { }
-            // Сброс мигания кнопки журнала
-            document.getElementById('btnLog').classList.remove('btn-flash-yellow', 'btn-flash-red');
         }
 
         let logInterval = null;
@@ -1025,9 +1249,10 @@
         let lastServerLogCount = -1;
         let isSetpointInitialized = false;
         let currentFontSize = 12;
-        let isSoundEnabled = true;
+        let isSoundEnabled = localStorage.getItem('isSoundEnabled') !== 'false';
         let isLocalLog = false;
         let localLogData = [];
+        let wasInErrorState = false;
 
         // Восстановление уставки из localStorage при загрузке
         const savedSetpoint = localStorage.getItem('savedSetpoint');
@@ -1036,8 +1261,12 @@
             isSetpointInitialized = true; // Предотвращаем перезапись значением с сервера при первом опросе
         }
 
+        // Установка начального состояния кнопки звука
+        document.getElementById('btnSound').innerText = isSoundEnabled ? '🔊' : '🔇';
+
         function toggleSound() {
             isSoundEnabled = !isSoundEnabled;
+            localStorage.setItem('isSoundEnabled', isSoundEnabled);
             const btn = document.getElementById('btnSound');
             btn.innerText = isSoundEnabled ? '🔊' : '🔇';
         }
@@ -1199,10 +1428,6 @@
                 currentPage = 1; // Сброс на первую страницу при открытии
                 fetchLogs();
                 
-                // Сбрас мигания при открытии
-                document.getElementById('btnLog').classList.remove('btn-flash-yellow', 'btn-flash-red');
-                // seenLogCount обновится в следующем цикле updateData
-                
                 logInterval = setInterval(fetchLogs, 2000);
             } else {
                 // Скрываем журнал
@@ -1341,12 +1566,10 @@
         // Закрытие журнала при клике вне его области в полноэкранном режиме
         document.addEventListener('click', function(event) {
             const container = document.getElementById('logContainer');
-            const btnLog = document.getElementById('btnLog');
             
             if (container.style.display !== 'none' && 
                 container.classList.contains('fullscreen') && 
-                !container.contains(event.target) && 
-                event.target !== btnLog) {
+                !container.contains(event.target)) {
                 toggleLogs();
             }
         });
@@ -1373,6 +1596,30 @@
                 
                 osc.start();
                 osc.stop(ctx.currentTime + 0.15);
+            } catch (e) { console.error(e); }
+        }
+
+        function playErrorSound() {
+            if (!isSoundEnabled) return;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                
+                const ctx = new AudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                
+                // Более "тревожный" звук: квадратная волна, низкая частота
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(300, ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                
+                osc.start();
+                osc.stop(ctx.currentTime + 0.4);
             } catch (e) { console.error(e); }
         }
 
@@ -1419,6 +1666,69 @@
         if (document.getElementById('logContainer').style.display !== 'none') {
             fetchLogs();
             logInterval = setInterval(fetchLogs, 2000);
+        }
+
+        function openAboutModal() {
+            document.getElementById('aboutModal').style.display = 'flex';
+        }
+
+        function closeAboutModal() {
+            document.getElementById('aboutModal').style.display = 'none';
+        }
+
+        // Закрытие модального окна по клавише Esc
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeAboutModal();
+            }
+        });
+
+        // Drag and Drop Logic
+        const draggables = document.querySelectorAll('.draggable');
+        const containers = document.querySelectorAll('.sortable-list');
+
+        draggables.forEach(draggable => {
+            draggable.addEventListener('dragstart', () => {
+                draggable.classList.add('dragging');
+            });
+
+            draggable.addEventListener('dragend', () => {
+                draggable.classList.remove('dragging');
+            });
+        });
+
+        containers.forEach(container => {
+            container.addEventListener('dragover', e => {
+                e.preventDefault();
+                const isHorizontal = container.classList.contains('horizontal-sort');
+                const afterElement = getDragAfterElement(container, e.clientX, e.clientY, isHorizontal);
+                const draggable = document.querySelector('.dragging');
+                
+                // Разрешаем перетаскивание только внутри своего родителя (или совместимого контейнера)
+                if (draggable && draggable.parentElement === container) {
+                    if (afterElement == null) {
+                        container.appendChild(draggable);
+                    } else {
+                        container.insertBefore(draggable, afterElement);
+                    }
+                }
+            });
+        });
+
+        function getDragAfterElement(container, x, y, isHorizontal) {
+            const draggableElements = [...container.querySelectorAll('.draggable:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                // Для горизонтального: проверяем X, для вертикального: Y
+                const offset = isHorizontal ? x - box.left - box.width / 2 : y - box.top - box.height / 2;
+                
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
         }
     </script>
 </body>

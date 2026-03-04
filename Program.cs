@@ -8,11 +8,22 @@ using OwenModbusMonitor;
 using System;
 using System.IO;
 using System.Linq;
+using System.Drawing;
+using System.Threading;
+using System.Windows.Forms;
+using Microsoft.Web.WebView2.WinForms;
+
+// Явно указываем путь к контенту равным папке с исполняемым файлом (.exe)
+var options = new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = AppContext.BaseDirectory
+};
+
+var builder = WebApplication.CreateBuilder(options);
 
 // Создаем папку wwwroot, если она отсутствует, чтобы избежать ошибки WebRootPath
-Directory.CreateDirectory("wwwroot");
-
-var builder = WebApplication.CreateBuilder(args);
+Directory.CreateDirectory(Path.Combine(AppContext.BaseDirectory, "wwwroot"));
 
 // Настраиваем прослушивание порта 5000
 builder.WebHost.ConfigureKestrel(options => options.ListenAnyIP(5000));
@@ -248,8 +259,82 @@ app.MapGet("/api/logs", (string? filter, int? page, int? pageSize, string? sort,
     return Results.Ok(new { total = 0, page = p, pageSize = ps, logs = Array.Empty<object>() });
 });
 
-Console.WriteLine("Веб-сервер запущен: http://localhost:5000");
-app.Run();
+// Запускаем веб-сервер асинхронно, сохраняя задачу для контроля
+var serverTask = app.RunAsync();
+
+// Запускаем UI в отдельном STA потоке (требование Windows Forms)
+var uiThread = new Thread(() =>
+{
+    Application.SetHighDpiMode(HighDpiMode.SystemAware);
+    Application.EnableVisualStyles();
+    Application.SetCompatibleTextRenderingDefault(false);
+
+    var form = new Form { Text = "Owen Modbus Monitor", WindowState = FormWindowState.Maximized };
+
+    // Загружаем иконку, если файл app.ico существует
+    Icon appIcon = SystemIcons.Application;
+    if (File.Exists("app.ico"))
+    {
+        appIcon = new Icon("app.ico");
+        form.Icon = appIcon; // Иконка окна и панели задач
+    }
+
+    var webView = new WebView2 { Dock = DockStyle.Fill };
+    form.Controls.Add(webView);
+
+    // --- Логика работы с треем (System Tray) ---
+    // Создаем иконку в трее (используем стандартную иконку приложения)
+    // Чтобы использовать свой файл: new Icon("icon.ico")
+    using var notifyIcon = new NotifyIcon();
+    notifyIcon.Icon = appIcon; // Иконка в трее
+    notifyIcon.Text = "Owen Modbus Monitor";
+    notifyIcon.Visible = true;
+
+    // Контекстное меню для иконки
+    var contextMenu = new ContextMenuStrip();
+    contextMenu.Items.Add("Открыть", null, (s, e) => {
+        form.Show();
+        form.WindowState = FormWindowState.Maximized;
+        form.Activate();
+    });
+    contextMenu.Items.Add("Выход", null, (s, e) => {
+        Application.Exit();
+    });
+    notifyIcon.ContextMenuStrip = contextMenu;
+
+    // Открытие окна по двойному клику на иконку
+    notifyIcon.DoubleClick += (s, e) => contextMenu.Items[0].PerformClick();
+
+    // Перехват сворачивания окна для скрытия в трей
+    form.Resize += (s, e) =>
+    {
+        if (form.WindowState == FormWindowState.Minimized)
+        {
+            form.Hide();
+            notifyIcon.ShowBalloonTip(3000, "Owen Modbus Monitor", "Приложение свернуто в трей. Работа продолжается в фоне.", ToolTipIcon.Info);
+        }
+    };
+
+    // При закрытии формы, убеждаемся, что иконка в трее тоже исчезнет
+    form.FormClosing += (s, e) => {
+        notifyIcon.Visible = false;
+    };
+
+    form.Load += async (s, e) =>
+    {
+        await webView.EnsureCoreWebView2Async();
+        webView.Source = new Uri("http://localhost:5000");
+    };
+
+    Application.Run(form);
+});
+uiThread.SetApartmentState(ApartmentState.STA);
+uiThread.Start();
+uiThread.Join(); // Ждем закрытия окна, прежде чем завершить приложение
+
+// После закрытия окна останавливаем сервер и ждем завершения всех процессов
+await app.StopAsync();
+await serverTask;
 
 record SetpointRequest(float Value);
 record LogRequest(string Line);
