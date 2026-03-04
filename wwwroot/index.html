@@ -434,6 +434,12 @@
         .draggable { cursor: grab; }
         .draggable:active { cursor: grabbing; }
         .draggable.dragging { opacity: 0.4; border: 2px dashed #58a6ff; box-shadow: none; }
+
+        /* SVG Gauge Styles */
+        #gaugeNeedleGroup { transition: transform 0.8s cubic-bezier(0.45, 0.05, 0.55, 0.95); }
+        #gaugeArcFill { transition: stroke-dashoffset 0.8s cubic-bezier(0.45, 0.05, 0.55, 0.95); }
+        .pulse { animation: pulseOp 2s ease-in-out infinite; }
+        @keyframes pulseOp { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -471,11 +477,11 @@
                     <div class="setpoint-header">
                         <h2>Уставка давления</h2>
                     </div>
-                    <div class="setpoint-body">
+                    <div class="setpoint-body" style="padding-top: 7px;">
                         <div class="input-group">
-                            <input type="number" id="setpointInput" step="0.1" min="0" max="50" placeholder="0.0">
+                            <input type="number" id="setpointInput" step="0.1" min="0" max="50" placeholder="0.0" style="text-align: center; padding-left: 18px; padding-right: 2px;">
                             <button onclick="sendSetpoint()" class="btn-primary">Применить</button>
-                        </div>
+                        </div> 
                         <div class="presets-group" style="flex-wrap: wrap;">
                             <button class="btn-preset" style="flex: 1 1 40%;" onclick="document.getElementById('setpointInput').value = 6.3">6.3</button>
                             <button class="btn-preset" style="flex: 1 1 40%;" onclick="document.getElementById('setpointInput').value = 16">16</button>
@@ -491,11 +497,48 @@
                 </div>
                 <div class="sensor-main draggable" draggable="false">
                     <h2>Датчик Давления</h2>
-                    <div style="position: relative; width: 85%; flex: 1; min-height: 0;">
-                        <canvas id="gaugeChart"></canvas>
-                    </div>
-                    <div class="value-display">
-                        <span id="pressureValue">--</span><span class="unit">бар</span>
+                    <div style="position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden;">
+                        <svg id="gaugeSvg" viewBox="0 0 500 500" style="width: 100%; height: 100%; max-height: 300px;">
+                            <defs>
+                                <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#21262d"></stop>
+                                    <stop offset="100%" stop-color="#0d1117"></stop>
+                                </linearGradient>
+                                <linearGradient id="arcGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#58a6ff"></stop>
+                                    <stop offset="100%" stop-color="#1f6feb"></stop>
+                                </linearGradient>
+                                <linearGradient id="alarmGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#f2495c"></stop>
+                                    <stop offset="100%" stop-color="#ff6b6b"></stop>
+                                </linearGradient>
+                                <linearGradient id="needleGradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#58a6ff"></stop>
+                                    <stop offset="100%" stop-color="#161b22" stop-opacity="0"></stop>
+                                </linearGradient>
+                                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                    <feGaussianBlur stdDeviation="6" result="blur"></feGaussianBlur>
+                                    <feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+                                </filter>
+                            </defs>
+                            <circle cx="250" cy="250" r="240" fill="url(#bgGradient)"></circle>
+                            <circle cx="250" cy="250" r="225" fill="#161b22" stroke="#30363d" stroke-width="2"></circle>
+                            <circle cx="250" cy="250" r="100" fill="none" stroke="#30363d" stroke-width="1"></circle>
+                            <circle cx="250" cy="250" r="110" fill="none" stroke="#30363d" stroke-width="1" stroke-dasharray="2 4"></circle>
+                            <path d="M 140.39 359.61 A 155 155 0 1 1 359.61 359.61" fill="none" stroke="#30363d" stroke-width="6" stroke-dasharray="2 12.1"></path>
+                            <path d="M 122.72 377.28 A 180 180 0 1 1 377.28 377.28" fill="none" stroke="#0d1117" stroke-width="26" stroke-linecap="round"></path>
+                            <path d="M 122.72 377.28 A 180 180 0 1 1 377.28 377.28" fill="none" stroke="#21262d" stroke-width="16" stroke-linecap="round"></path>
+                            <path id="gaugeArcFill" d="M 122.72 377.28 A 180 180 0 1 1 377.28 377.28" fill="none" stroke="url(#arcGradient)" stroke-width="16" stroke-linecap="round" filter="url(#glow)" stroke-dasharray="848.23" stroke-dashoffset="848.23"></path>
+                            <g id="gaugeLabels"></g>
+                            <text x="250" y="385" font-family="'JetBrains Mono', monospace" font-size="14" font-weight="600" fill="#8b949e" text-anchor="middle" letter-spacing="3">ДАВЛЕНИЕ</text>
+                            <text id="gaugeTextValue" x="250" y="425" font-family="'JetBrains Mono', monospace" font-size="32" font-weight="bold" fill="#e6edf3" text-anchor="middle" letter-spacing="2">--</text>
+                            <g id="gaugeNeedleGroup" style="transform-origin: 250px 250px;">
+                                <polygon points="244,250 256,250 250,90" fill="url(#needleGradient)" filter="url(#glow)"></polygon>
+                                <circle cx="250" cy="250" r="22" fill="#21262d" stroke="#0d1117" stroke-width="4"></circle>
+                                <circle cx="250" cy="250" r="12" fill="#0d1117" stroke="#58a6ff" stroke-width="2"></circle>
+                                <circle cx="250" cy="250" r="4" fill="#58a6ff"></circle>
+                            </g>
+                        </svg>
                     </div>
                 </div>
             </div>
@@ -827,94 +870,6 @@
             plugins: [verticalLinePlugin]
         });
 
-        // Gauge Chart
-        const gaugeNeedle = {
-            id: 'gaugeNeedle',
-            afterDatasetDraw(chart, args, options) {
-                const { ctx, data } = chart;
-                const meta = chart.getDatasetMeta(0);
-                if (!meta.data.length) return;
-                
-                const x = meta.data[0].x;
-                const y = meta.data[0].y;
-                const outerRadius = meta.data[0].outerRadius;
-                const innerRadius = meta.data[0].innerRadius;
-                
-                const needleValue = data.datasets[0].needleValue || 0;
-                const maxValue = data.datasets[0].maxValue || 100;
-                
-                let angle = Math.PI + (needleValue / maxValue) * Math.PI;
-                if (angle < Math.PI) angle = Math.PI;
-                if (angle > 2 * Math.PI) angle = 2 * Math.PI;
-
-                ctx.save();
-                ctx.translate(x, y);
-                ctx.rotate(angle);
-                ctx.beginPath();
-                ctx.moveTo(0, -3);
-                ctx.lineTo(outerRadius - 5, 0);
-                ctx.lineTo(0, 3);
-                ctx.fillStyle = '#58a6ff';
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(0, 0, 5, 0, Math.PI * 2);
-                ctx.fillStyle = '#58a6ff';
-                ctx.fill();
-                ctx.restore();
-
-                // Рисуем метки шкалы
-                ctx.font = '11px JetBrains Mono';
-                ctx.fillStyle = '#8b949e';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                const steps = 4;
-                const subSteps = 5;
-                const totalTicks = steps * subSteps;
-                const labelRadius = innerRadius - 35;
-
-                for (let i = 0; i <= totalTicks; i++) {
-                    const isMajor = i % subSteps === 0;
-                    const angle = Math.PI + (i / totalTicks) * Math.PI;
-                    
-                    // Рисуем засечки
-                    const tickLength = isMajor ? 8 : 4;
-                    const sx = x + Math.cos(angle) * (innerRadius - tickLength);
-                    const sy = y + Math.sin(angle) * (innerRadius - tickLength);
-                    const ex = x + Math.cos(angle) * innerRadius;
-                    const ey = y + Math.sin(angle) * innerRadius;
-                    ctx.beginPath();
-                    ctx.moveTo(sx, sy);
-                    ctx.lineTo(ex, ey);
-                    ctx.lineWidth = isMajor ? 2 : 1;
-                    ctx.strokeStyle = '#8b949e';
-                    ctx.stroke();
-
-                    if (isMajor) {
-                        const val = (maxValue / steps) * (i / subSteps);
-                        const tx = x + Math.cos(angle) * labelRadius;
-                        const ty = y + Math.sin(angle) * labelRadius;
-                        ctx.fillText(val % 1 === 0 ? val.toFixed(0) : val.toFixed(1), tx, ty);
-                    }
-                }
-            }
-        };
-
-        const gaugeCtx = document.getElementById('gaugeChart').getContext('2d');
-        const gaugeChart = new Chart(gaugeCtx, {
-            type: 'doughnut',
-            data: { datasets: [{ data: [1], backgroundColor: ['#30363d'], borderWidth: 0, needleValue: 0, maxValue: 50 }] },
-            options: { 
-                rotation: -90, 
-                circumference: 180, 
-                cutout: '85%', 
-                maintainAspectRatio: false, 
-                responsive: true, 
-                layout: { padding: { bottom: 30, left: 10, right: 10 } },
-                plugins: { legend: { display: false }, tooltip: { enabled: false } } 
-            },
-            plugins: [gaugeNeedle]
-        });
-
         let clientConnectionLostTime = null;
         let serverWaitingSeconds = 0;
         let isDeviceConnected = true;
@@ -986,18 +941,37 @@
                 // Если данные еще не получены (null), пропускаем обновление
                 if (data.pressure === null) return;
                 
-                document.getElementById('pressureValue').innerText = data.pressure.toFixed(2);
-
-                // Update Gauge
+                // Update SVG Gauge
                 const maxVal = (data.setpoint || 50) * 1.2;
-                gaugeChart.data.datasets[0].maxValue = maxVal;
-                gaugeChart.data.datasets[0].needleValue = data.pressure;
-                if (data.setpoint && data.setpoint > 0) {
-                    // Green zone up to setpoint, Red zone after
-                    gaugeChart.data.datasets[0].data = [data.setpoint, maxVal - data.setpoint];
-                    gaugeChart.data.datasets[0].backgroundColor = ['#238636', '#f2495c'];
+                
+                if (Math.abs(maxVal - lastMaxVal) > 0.1) {
+                    lastMaxVal = maxVal;
+                    drawGaugeLabels(maxVal);
                 }
-                gaugeChart.update();
+
+                const pressure = data.pressure;
+                const pct = Math.min(Math.max(pressure / maxVal, 0), 1);
+
+                // Вращение стрелки: от -135 до +135 градусов (всего 270)
+                const angle = -135 + (pct * 270);
+                const needleGroup = document.getElementById('gaugeNeedleGroup');
+                if (needleGroup) needleGroup.style.transform = `rotate(${angle}deg)`;
+
+                // Заполнение дуги: длина 848.23
+                const arcLen = 848.23;
+                const arcFill = document.getElementById('gaugeArcFill');
+                if (arcFill) {
+                    arcFill.style.strokeDashoffset = arcLen * (1 - pct);
+                    if (data.setpoint && pressure >= data.setpoint + (data.setpoint * 0.05)) {
+                        arcFill.setAttribute('stroke', 'url(#alarmGradient)');
+                    } else {
+                        arcFill.setAttribute('stroke', 'url(#arcGradient)');
+                    }
+                }
+
+                // Текст значения
+                const textVal = document.getElementById('gaugeTextValue');
+                if (textVal) textVal.textContent = pressure.toFixed(2);
 
                 // Обновление статусов в stats-panel
                 const setStatus = (id, isActive, color) => {
@@ -1253,6 +1227,7 @@
         let isLocalLog = false;
         let localLogData = [];
         let wasInErrorState = false;
+        let lastMaxVal = -1;
 
         // Восстановление уставки из localStorage при загрузке
         const savedSetpoint = localStorage.getItem('savedSetpoint');
@@ -1561,6 +1536,43 @@
         function resetFontSize() {
             currentFontSize = 12;
             document.getElementById('logContent').style.fontSize = currentFontSize + 'px';
+        }
+
+        function drawGaugeLabels(maxVal) {
+            const container = document.getElementById('gaugeLabels');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            const stepCount = 6;
+            const r = 200; 
+            const cx = 250;
+            const cy = 250;
+            
+            for (let i = 0; i <= stepCount; i++) {
+                const pct = i / stepCount;
+                const val = maxVal * pct;
+                const angleDeg = 135 + (pct * 270);
+                const angleRad = angleDeg * (Math.PI / 180);
+                
+                const x = cx + r * Math.cos(angleRad);
+                const y = cy + r * Math.sin(angleRad);
+                
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", x);
+                text.setAttribute("y", y);
+                text.setAttribute("fill", "#8b949e");
+                text.setAttribute("font-family", "'JetBrains Mono', monospace");
+                text.setAttribute("font-size", "14");
+                text.setAttribute("font-weight", "600");
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("dominant-baseline", "middle");
+                
+                let textVal = Math.round(val);
+                if (maxVal <= 10) textVal = val.toFixed(1);
+                
+                text.textContent = textVal;
+                container.appendChild(text);
+            }
         }
 
         // Закрытие журнала при клике вне его области в полноэкранном режиме
